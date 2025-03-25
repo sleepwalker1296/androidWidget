@@ -1,0 +1,18 @@
+<resources>
+    <style name="Theme.GGWidget" parent="Theme.MaterialComponents.DayNight">
+        <item name="colorPrimary">@color/your_primary_color</item>
+        <item name="colorPrimaryVariant">@color/purple_700</item>
+        <item name="colorOnPrimary">@color/white</item>
+
+        <item name="colorSecondary">@color/teal_200</item>
+        <item name="colorSecondaryVariant">@color/teal_700</item>
+        <item name="colorOnSecondary">@color/black</item>
+
+        <item name="colorSurface">@color/your_surface_color</item>
+        <item name="colorOnSurface">@color/your_on_surface_color</item>
+        <item name="colorBackground">@color/your_background_color</item>
+        <item name="colorOnBackground">@color/your_text_primary</item>
+
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+    </style>
+</resources>

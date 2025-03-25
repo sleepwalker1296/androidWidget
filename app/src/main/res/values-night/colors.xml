@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Цвета для темной темы -->
+    <color name="your_primary_color_dark">#FFBB86FC</color>
+    <color name="your_surface_color_dark">#FF121212</color>
+    <color name="your_on_surface_color_dark">#FFEEEEEE</color>
+    <color name="your_background_color_dark">#FF121212</color>
+    <color name="your_card_background_dark">#FF1E1E1E</color>
+    <color name="your_text_primary_dark">#FFEEEEEE</color>
+    <color name="your_text_secondary_dark">#FFB0B0B0</color>
+</resources>
