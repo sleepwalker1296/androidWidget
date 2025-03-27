@@ -1,5 +1,5 @@
 <resources>
-    <style name="Theme.GGWidget" parent="Theme.MaterialComponents.DayNight">
+    <style name="Theme.GGWidget" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/your_primary_color_dark</item>
         <item name="colorPrimaryVariant">@color/purple_700</item>
         <item name="colorOnPrimary">@color/black</item>
