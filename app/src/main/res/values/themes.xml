@@ -13,6 +13,7 @@
         <item name="colorBackground">@color/your_background_color</item>
         <item name="colorOnBackground">@color/your_text_primary</item>
 
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        <item name="android:statusBarColor">@color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>
