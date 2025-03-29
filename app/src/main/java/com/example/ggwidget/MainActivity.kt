@@ -6,10 +6,12 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.util.Log
+import android.view.ViewGroup
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -21,14 +23,23 @@ import java.text.DecimalFormat
 class MainActivity : AppCompatActivity() {
 
     private lateinit var priceTextView: TextView
+    private lateinit var priceTonTextView: TextView
+    private lateinit var fdvTextView: TextView
+
+    // Для отображения изменений в процентах
+    private lateinit var change30mTextView: TextView
+    private lateinit var change1hTextView: TextView
+    private lateinit var change6hTextView: TextView
+    private lateinit var change24hTextView: TextView
+
     private val handler = Handler(Looper.getMainLooper())
-    private val updateInterval = 60_000L
+    private val updateInterval = 60_000L // Обновление каждую минуту
+    private val apiUrl = "https://api.geckoterminal.com/api/v2/networks/ton/pools/EQAf2LUJZMdxSAGhlp-A60AN9bqZeVM994vCOXH05JFo-7dc"
 
     private val updateRunnable = object : Runnable {
         override fun run() {
-            if (isScreenOn()) {
-                fetchCoinPrice()
-            }
+            Log.d("MainActivity", "Обновление данных...")
+            if (isScreenOn()) fetchAllPrices()
             handler.postDelayed(this, updateInterval)
         }
     }
@@ -37,20 +48,32 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        priceTextView = findViewById(R.id.price_text)
-
-        fetchCoinPrice()
-
-        val settingsButton: Button = findViewById(R.id.settings_button)
-        settingsButton.setOnClickListener {
-            val intent = Intent(this, SettingsActivity::class.java)
-            startActivityForResult(intent, SETTINGS_REQUEST_CODE)
+        val layout = findViewById<LinearLayout>(R.id.main_layout)
+        layout.layoutParams = (layout.layoutParams as ViewGroup.MarginLayoutParams).apply {
+            topMargin = getStatusBarHeight()
         }
+
+        priceTextView = findViewById(R.id.price_usd)
+        priceTonTextView = findViewById(R.id.price_ton)
+        fdvTextView = findViewById(R.id.fdv_usd)
+
+        // Инициализация TextView для изменений в процентах
+        change30mTextView = findViewById(R.id.change_30m)
+        change1hTextView = findViewById(R.id.change_1h)
+        change6hTextView = findViewById(R.id.change_6h)
+        change24hTextView = findViewById(R.id.change_24h)
+
+        findViewById<Button>(R.id.settings_button).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+        }
+
+        // Запрос данных при запуске
+        fetchAllPrices()
     }
 
     override fun onResume() {
         super.onResume()
-        fetchCoinPrice()
         handler.postDelayed(updateRunnable, updateInterval)
     }
 
@@ -59,53 +82,138 @@ class MainActivity : AppCompatActivity() {
         handler.removeCallbacks(updateRunnable)
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == SETTINGS_REQUEST_CODE && resultCode == RESULT_OK) {
-            // Полностью перезапускаем активность при возврате из настроек
-            finish()
-            startActivity(intent)
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
-        }
-    }
-
-    private fun fetchCoinPrice() {
+    private fun fetchAllPrices() {
         CoroutineScope(Dispatchers.IO).launch {
-            val price = fetchDataFromInternet()
-            runOnUiThread {
-                priceTextView.text = price
-            }
+            val data = fetchDataFromAPI()
+            runOnUiThread { updateUI(data) }
         }
     }
 
-    private fun fetchDataFromInternet(): String {
+    private fun fetchDataFromAPI(): Map<String, String> {
         return try {
             val client = OkHttpClient()
-            val request = Request.Builder()
-                .url("https://api.geckoterminal.com/api/v2/networks/ton/pools/EQAoJ9eh8MoKzErNE86N1uHzp4Eskth5Od5tDEYgS5mVU_Fj")
-                .build()
-
+            val request = Request.Builder().url(apiUrl).build()
             val response = client.newCall(request).execute()
-            val json = JSONObject(response.body?.string() ?: "{}")
 
-            val price = json.getJSONObject("data")
-                .getJSONObject("attributes")
-                .getString("base_token_price_usd")
+            if (!response.isSuccessful) {
+                Log.e("MainActivity", "Ошибка ответа API: ${response.code}")
+                return mapOf(
+                    "price_usd" to "Ошибка",
+                    "price_ton" to "Ошибка",
+                    "fdv_usd" to "Ошибка",
+                    "change_30m" to "0",
+                    "change_1h" to "0",
+                    "change_6h" to "0",
+                    "change_24h" to "0"
+                )
+            }
 
-            formatPrice(price)
+            val responseBody = response.body?.string()
+            Log.d("MainActivity", "API Response: $responseBody") // Логируем ответ API
+
+            val json = JSONObject(responseBody ?: "{}")
+            val attributes = json.getJSONObject("data").getJSONObject("attributes")
+
+            val priceUsd = formatPrice(attributes.optString("base_token_price_usd", "0"))
+            val priceTon = formatPrice(attributes.optString("base_token_price_native_currency", "0"))
+            val fdvUsd = formatMarketCap(attributes.optDouble("fdv_usd", 0.0))
+
+            // Получаем проценты изменения цены
+            val priceChanges = attributes.getJSONObject("price_change_percentage")
+
+            // Используем optDouble вместо optString для получения числовых значений
+            val change30m = priceChanges.optDouble("m30", 0.0).toString()
+            val change1h = priceChanges.optDouble("h1", 0.0).toString()
+            val change6h = priceChanges.optDouble("h6", 0.0).toString()
+            val change24h = priceChanges.optDouble("h24", 0.0).toString()
+
+            // Логируем полученные значения для отладки
+            Log.d("MainActivity", "Проценты изменения: 30m=$change30m, 1h=$change1h, 6h=$change6h, 24h=$change24h")
+
+            mapOf(
+                "price_usd" to priceUsd,
+                "price_ton" to priceTon,
+                "fdv_usd" to fdvUsd,
+                "change_30m" to change30m,
+                "change_1h" to change1h,
+                "change_6h" to change6h,
+                "change_24h" to change24h
+            )
         } catch (e: Exception) {
-            "Ошибка сети"
+            Log.e("MainActivity", "Ошибка при запросе данных", e)
+            mapOf(
+                "price_usd" to "Ошибка",
+                "price_ton" to "Ошибка",
+                "fdv_usd" to "Ошибка",
+                "change_30m" to "0",
+                "change_1h" to "0",
+                "change_6h" to "0",
+                "change_24h" to "0"
+            )
+        }
+    }
+
+    private fun updateUI(data: Map<String, String>) {
+        try {
+            // Обновляем цену в долларах и ТОН
+            priceTextView.text = data["price_usd"]
+            priceTonTextView.text = data["price_ton"]
+            fdvTextView.text = data["fdv_usd"]
+
+            // Парсим значения процентов
+            val change30m = data["change_30m"]?.toDoubleOrNull() ?: 0.0
+            val change1h = data["change_1h"]?.toDoubleOrNull() ?: 0.0
+            val change6h = data["change_6h"]?.toDoubleOrNull() ?: 0.0
+            val change24h = data["change_24h"]?.toDoubleOrNull() ?: 0.0
+
+            // Обновляем текст с процентами
+            change30mTextView.text = formatPercentage(change30m)
+            change1hTextView.text = formatPercentage(change1h)
+            change6hTextView.text = formatPercentage(change6h)
+            change24hTextView.text = formatPercentage(change24h)
+
+            // Устанавливаем цвет текста в зависимости от значения
+            setTextColor(change30mTextView, change30m)
+            setTextColor(change1hTextView, change1h)
+            setTextColor(change6hTextView, change6h)
+            setTextColor(change24hTextView, change24h)
+
+            Log.d("MainActivity", "UI обновлен с процентами: 30m=${change30m}, 1h=${change1h}, 6h=${change6h}, 24h=${change24h}")
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Ошибка при обновлении UI", e)
         }
     }
 
     private fun formatPrice(price: String): String {
         return try {
-            val number = price.toDouble()
-            val decimalFormat = DecimalFormat("#0.00")
-            "$" + decimalFormat.format(number).replace(",", ".")
+            "$" + DecimalFormat("#0.00").format(price.toDouble()).replace(",", ".")
         } catch (e: Exception) {
             "Ошибка"
+        }
+    }
+
+    private fun formatMarketCap(value: Double): String {
+        return when {
+            value >= 1_000_000 -> "$${DecimalFormat("#0.00").format(value / 1_000_000)} млн"
+            value >= 1_000 -> "$${DecimalFormat("#0.00").format(value / 1_000)} тыс."
+            else -> "$${DecimalFormat("#0.00").format(value)}"
+        }
+    }
+
+    private fun formatPercentage(value: Double): String {
+        return when {
+            value > 0 -> "+${DecimalFormat("#0.0").format(value)}%"
+            value < 0 -> "${DecimalFormat("#0.0").format(value)}%"
+            else -> "0.0%" // Explicitly return "0.0%" for zero values
+        }
+    }
+
+    // Добавляем функцию для установки цвета текста
+    private fun setTextColor(textView: TextView, value: Double) {
+        when {
+            value > 0 -> textView.setTextColor(resources.getColor(android.R.color.holo_green_light, theme))
+            value < 0 -> textView.setTextColor(resources.getColor(android.R.color.holo_red_light, theme))
+            else -> textView.setTextColor(resources.getColor(android.R.color.black, theme)) // Change to black for zero values
         }
     }
 
@@ -114,7 +222,8 @@ class MainActivity : AppCompatActivity() {
         return powerManager.isInteractive
     }
 
-    companion object {
-        private const val SETTINGS_REQUEST_CODE = 1001
+    private fun getStatusBarHeight(): Int {
+        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
+        return if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else 0
     }
 }

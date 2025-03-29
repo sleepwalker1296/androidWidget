@@ -1,8 +1,10 @@
 package com.example.ggwidget
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.switchmaterial.SwitchMaterial
 
 class SettingsActivity : AppCompatActivity() {
@@ -10,6 +12,17 @@ class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
+
+        // Скрываем стандартный ActionBar
+        supportActionBar?.hide()
+
+        // Настраиваем кнопку "Назад"
+        val backButton = findViewById<MaterialButton>(R.id.back_button)
+        backButton.setOnClickListener {
+            // Закрываем активность и возвращаемся в MainActivity
+            finish()
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+        }
 
         val themeSwitch = findViewById<SwitchMaterial>(R.id.theme_switch)
         val sharedPreferences = getSharedPreferences("settings", MODE_PRIVATE)
@@ -27,14 +40,17 @@ class SettingsActivity : AppCompatActivity() {
                 else AppCompatDelegate.MODE_NIGHT_NO
             )
 
-            // Устанавливаем результат
-            setResult(RESULT_OK)
+            // Перезапускаем ГЛАВНУЮ активность
+            val intent = Intent(this, MainActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            finish()
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
         }
     }
 
     override fun onBackPressed() {
-        // Убедимся, что результат отправляется при нажатии кнопки "назад"
-        setResult(RESULT_OK)
         super.onBackPressed()
+        overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
     }
 }

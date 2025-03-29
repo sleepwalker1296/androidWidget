@@ -1,4 +1,4 @@
-package com.example.ggwidget  // Убедитесь, что пакет соответствует вашему проекту
+package com.example.ggwidget
 
 import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate

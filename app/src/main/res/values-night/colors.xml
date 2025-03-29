@@ -8,4 +8,6 @@
     <color name="your_card_background_dark">#FF1E1E1E</color>
     <color name="your_text_primary_dark">#FFEEEEEE</color>
     <color name="your_text_secondary_dark">#FFB0B0B0</color>
+    <color name="light_green">#DFF6DD</color>
+    <color name="light_red">#F8D7DA</color>
 </resources>
