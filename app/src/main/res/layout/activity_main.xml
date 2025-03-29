@@ -6,10 +6,91 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:gravity="center">
+    android:padding="16dp">
 
-    <!-- Контейнер для цен -->
+    <!-- Контейнер для иконки, текстов и кнопки -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp"
+        android:gravity="center_vertical"> <!-- Выравнивание всех дочерних элементов по вертикали -->
+
+        <!-- Левый блок с иконкой и текстами -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Иконка -->
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/image"
+                android:background="@drawable/circle_background"
+                android:clipToOutline="true"
+                android:scaleType="centerCrop"
+                android:layout_marginEnd="8dp"/>
+
+            <!-- Вертикальный контейнер для текстов -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="start|center_vertical"> <!-- Центрирование текста по вертикали относительно иконки -->
+
+                <!-- Горизонтальный контейнер для GOVNO и confirmed -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="GOVNO"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/black"
+                        android:layout_marginEnd="1dp"/>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/confirmed"
+                        android:contentDescription="Confirmed icon"/>
+
+                </LinearLayout>
+
+                <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Цена GOVNO"
+                android:textColor="@android:color/darker_gray"
+                android:textSize="14sp"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Кнопка Настройки справа -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/settings_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:backgroundTint="?attr/colorSurface"
+            android:padding="8dp"
+            android:text="⚙ Настройки"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="16sp"
+            android:layout_gravity="center_vertical"/> <!-- Выравнивание кнопки по центру вертикали -->
+
+    </LinearLayout>
+
+    <!-- Контейнер для цен с отступом сверху -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -112,7 +193,7 @@
 
     </LinearLayout>
 
-    <!-- Контейнер для блоков с изменениями -->
+    <!-- Остальные части layout остаются без изменений -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -370,7 +451,7 @@
 
     </LinearLayout>
 
-    <!-- Новый контейнер для блоков Рыночная капитализация и Ликвидность -->
+    <!-- Новый контейнер для блоков Общее предложение и Держатели -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -447,7 +528,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="5M"
+                    android:text="0"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="#000000"
@@ -458,19 +539,4 @@
 
     </LinearLayout>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/settings_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="⚙ Настройки"
-        android:textSize="16sp"
-        android:backgroundTint="?attr/colorSurface"
-        android:textColor="?attr/colorOnSurface"
-        android:padding="8dp"
-        android:layout_marginTop="16dp"
-        android:gravity="center"
-        android:layout_alignParentBottom="true" />
-
 </LinearLayout>
-
-
