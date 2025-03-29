@@ -178,6 +178,12 @@ class MainActivity : AppCompatActivity() {
             setTextColor(change6hTextView, change6h)
             setTextColor(change24hTextView, change24h)
 
+            // Применяем цвет фона для каждого блока
+            setBackgroundColor(change30mTextView, change30m)
+            setBackgroundColor(change1hTextView, change1h)
+            setBackgroundColor(change6hTextView, change6h)
+            setBackgroundColor(change24hTextView, change24h)
+
             Log.d("MainActivity", "UI обновлен с процентами: 30m=${change30m}, 1h=${change1h}, 6h=${change6h}, 24h=${change24h}")
         } catch (e: Exception) {
             Log.e("MainActivity", "Ошибка при обновлении UI", e)
@@ -214,6 +220,24 @@ class MainActivity : AppCompatActivity() {
             value > 0 -> textView.setTextColor(resources.getColor(android.R.color.holo_green_light, theme))
             value < 0 -> textView.setTextColor(resources.getColor(android.R.color.holo_red_light, theme))
             else -> textView.setTextColor(resources.getColor(android.R.color.black, theme)) // Change to black for zero values
+        }
+    }
+
+    // Функция для изменения фона LinearLayout с полупрозрачным цветом
+    private fun setBackgroundColor(textView: TextView, value: Double) {
+        val parentLayout = textView.parent as LinearLayout
+        val transparentAlpha = 0x30 // Альфа-канал для полупрозрачного фона (0x00 - полностью прозрачно, 0xFF - непрозрачно)
+
+        when {
+            value > 0 -> parentLayout.setBackgroundColor(
+                android.graphics.Color.argb(transparentAlpha, 0, 255, 0) // Полупрозрачный зеленый
+            )
+            value < 0 -> parentLayout.setBackgroundColor(
+                android.graphics.Color.argb(transparentAlpha, 255, 0, 0) // Полупрозрачный красный
+            )
+            else -> parentLayout.setBackgroundColor(
+                android.graphics.Color.argb(transparentAlpha, 169, 169, 169) // Полупрозрачный серый
+            )
         }
     }
 
