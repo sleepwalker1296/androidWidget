@@ -4,9 +4,10 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/main_layout"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:background="?attr/colorBackground">
 
     <!-- Контейнер для иконки, текстов и кнопки -->
     <LinearLayout
@@ -54,7 +55,7 @@
                         android:text="GOVNO"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/black"
+                        android:textColor="?attr/colorOnBackground"
                         android:layout_marginEnd="1dp"/>
 
                     <ImageView
@@ -69,7 +70,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Цена GOVNO"
-                    android:textColor="@android:color/darker_gray"
+                    android:textColor="#838384"
                     android:textSize="14sp"/>
 
             </LinearLayout>
@@ -105,7 +106,7 @@
             app:cardCornerRadius="16dp"
             app:cardElevation="4dp"
             android:layout_marginEnd="8dp"
-            app:strokeColor="@android:color/transparent"
+            app:cardBackgroundColor="?attr/colorSurface"
             app:strokeWidth="0dp">
 
             <LinearLayout
@@ -120,9 +121,9 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:text="Цена в USD"
-                    android:textColor="@android:color/darker_gray"
+                    android:textColor="#838384"
                     android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"/>
 
                 <TextView
                     android:id="@+id/price_usd"
@@ -130,9 +131,10 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:text="$ 12,34"
-                    android:textColor="@android:color/black"
+                    android:textColor="?attr/colorOnBackground"
                     android:textSize="28sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"/>
+
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
@@ -145,6 +147,7 @@
             app:cardCornerRadius="16dp"
             app:cardElevation="4dp"
             android:layout_marginStart="8dp"
+            app:cardBackgroundColor="?attr/colorSurface"
             app:strokeColor="@android:color/transparent"
             app:strokeWidth="0dp">
 
@@ -161,7 +164,7 @@
                     android:text="Цена TON"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:textColor="@android:color/darker_gray"
+                    android:textColor="#838384"
                     android:gravity="center"/>
 
                 <LinearLayout
@@ -172,11 +175,11 @@
 
                     <ImageView
                         android:layout_width="24dp"
-                        android:layout_height="24dp"
+                        android:layout_height="32dp"
                         android:src="@drawable/my_icon"
                         android:contentDescription="TON logo"
-                        android:tint="@android:color/black"
-                        android:layout_marginEnd="8dp"/>
+                        android:tint="?attr/colorOnBackground"
+                        android:layout_marginEnd="1dp"/>
 
                     <TextView
                         android:id="@+id/price_ton"
@@ -185,8 +188,9 @@
                         android:text="11,23"
                         android:textSize="28sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/black"
+                        android:textColor="?attr/colorOnBackground"
                         android:gravity="center"/>
+
                 </LinearLayout>
 
             </LinearLayout>
@@ -210,10 +214,10 @@
             android:layout_weight="1"
             app:cardCornerRadius="8dp"
             app:cardElevation="0dp"
-            app:strokeColor="@android:color/darker_gray"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:strokeColor="?attr/colorOnSurface"
             app:strokeWidth="1dp"
             android:padding="8dp"
-            android:gravity="center"
             android:layout_marginEnd="8dp">
 
             <LinearLayout
@@ -227,7 +231,7 @@
                     android:layout_height="wrap_content"
                     android:text="1 час"
                     android:textSize="14sp"
-                    android:textColor="@android:color/darker_gray"
+                    android:textColor="#838384"
                     android:gravity="center"/>
 
                 <TextView
@@ -239,6 +243,7 @@
                     android:textStyle="bold"
                     android:textColor="#FF0000"
                     android:gravity="center"/>
+
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
@@ -250,10 +255,10 @@
             android:layout_weight="1"
             app:cardCornerRadius="8dp"
             app:cardElevation="0dp"
-            app:strokeColor="@android:color/darker_gray"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:strokeColor="?attr/colorOnSurface"
             app:strokeWidth="1dp"
             android:padding="8dp"
-            android:gravity="center"
             android:layout_marginEnd="8dp">
 
             <LinearLayout
@@ -267,7 +272,7 @@
                     android:layout_height="wrap_content"
                     android:text="6 часов"
                     android:textSize="14sp"
-                    android:textColor="@android:color/darker_gray"
+                    android:textColor="#838384"
                     android:gravity="center"/>
 
                 <TextView
@@ -279,6 +284,7 @@
                     android:textStyle="bold"
                     android:textColor="#FF0000"
                     android:gravity="center"/>
+
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
@@ -290,10 +296,10 @@
             android:layout_weight="1"
             app:cardCornerRadius="8dp"
             app:cardElevation="0dp"
-            app:strokeColor="@android:color/darker_gray"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:strokeColor="?attr/colorOnSurface"
             app:strokeWidth="1dp"
             android:padding="8dp"
-            android:gravity="center"
             android:layout_marginEnd="8dp">
 
             <LinearLayout
@@ -307,7 +313,7 @@
                     android:layout_height="wrap_content"
                     android:text="12 часов"
                     android:textSize="14sp"
-                    android:textColor="@android:color/darker_gray"
+                    android:textColor="#838384"
                     android:gravity="center"/>
 
                 <TextView
@@ -319,6 +325,7 @@
                     android:textStyle="bold"
                     android:textColor="#FF0000"
                     android:gravity="center"/>
+
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
@@ -330,10 +337,10 @@
             android:layout_weight="1"
             app:cardCornerRadius="8dp"
             app:cardElevation="0dp"
-            app:strokeColor="@android:color/darker_gray"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:strokeColor="?attr/colorOnSurface"
             app:strokeWidth="1dp"
-            android:padding="8dp"
-            android:gravity="center">
+            android:padding="8dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -346,7 +353,7 @@
                     android:layout_height="wrap_content"
                     android:text="24 часа"
                     android:textSize="14sp"
-                    android:textColor="@android:color/darker_gray"
+                    android:textColor="#838384"
                     android:gravity="center"/>
 
                 <TextView
@@ -358,6 +365,7 @@
                     android:textStyle="bold"
                     android:textColor="#FF0000"
                     android:gravity="center"/>
+
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
@@ -379,10 +387,10 @@
             android:layout_weight="1"
             app:cardCornerRadius="8dp"
             app:cardElevation="0dp"
-            app:strokeColor="@android:color/darker_gray"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:strokeColor="?attr/colorOnSurface"
             app:strokeWidth="1dp"
             android:padding="8dp"
-            android:gravity="center"
             android:layout_marginEnd="8dp">
 
             <LinearLayout
@@ -396,7 +404,7 @@
                     android:layout_height="wrap_content"
                     android:text="Рыночная капитализация"
                     android:textSize="14sp"
-                    android:textColor="@android:color/darker_gray"
+                    android:textColor="#838384"
                     android:gravity="center"/>
 
                 <TextView
@@ -406,8 +414,9 @@
                     android:text="100B"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:textColor="#000000"
+                    android:textColor="?attr/colorOnBackground"
                     android:gravity="center"/>
+
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
@@ -419,10 +428,10 @@
             android:layout_weight="1"
             app:cardCornerRadius="8dp"
             app:cardElevation="0dp"
-            app:strokeColor="@android:color/darker_gray"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:strokeColor="?attr/colorOnSurface"
             app:strokeWidth="1dp"
-            android:padding="8dp"
-            android:gravity="center">
+            android:padding="8dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -435,7 +444,7 @@
                     android:layout_height="wrap_content"
                     android:text="Ликвидность"
                     android:textSize="14sp"
-                    android:textColor="@android:color/darker_gray"
+                    android:textColor="#838384"
                     android:gravity="center"/>
 
                 <TextView
@@ -445,8 +454,9 @@
                     android:text="5M"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:textColor="#000000"
+                    android:textColor="?attr/colorOnBackground"
                     android:gravity="center"/>
+
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
@@ -468,10 +478,10 @@
             android:layout_weight="1"
             app:cardCornerRadius="8dp"
             app:cardElevation="0dp"
-            app:strokeColor="@android:color/darker_gray"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:strokeColor="?attr/colorOnSurface"
             app:strokeWidth="1dp"
             android:padding="8dp"
-            android:gravity="center"
             android:layout_marginEnd="8dp">
 
             <LinearLayout
@@ -485,7 +495,7 @@
                     android:layout_height="wrap_content"
                     android:text="Общее предложение"
                     android:textSize="14sp"
-                    android:textColor="@android:color/darker_gray"
+                    android:textColor="#838384"
                     android:gravity="center"/>
 
                 <TextView
@@ -495,8 +505,9 @@
                     android:text="777 777"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:textColor="#000000"
+                    android:textColor="?attr/colorOnBackground"
                     android:gravity="center"/>
+
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
@@ -508,10 +519,10 @@
             android:layout_weight="1"
             app:cardCornerRadius="8dp"
             app:cardElevation="0dp"
-            app:strokeColor="@android:color/darker_gray"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:strokeColor="?attr/colorOnSurface"
             app:strokeWidth="1dp"
-            android:padding="8dp"
-            android:gravity="center">
+            android:padding="8dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -524,7 +535,7 @@
                     android:layout_height="wrap_content"
                     android:text="Держатели"
                     android:textSize="14sp"
-                    android:textColor="@android:color/darker_gray"
+                    android:textColor="#838384"
                     android:gravity="center"/>
 
                 <TextView
@@ -534,8 +545,9 @@
                     android:text="0"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:textColor="#000000"
+                    android:textColor="?attr/colorOnBackground"
                     android:gravity="center"/>
+
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>

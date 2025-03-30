@@ -10,6 +10,7 @@
     <color name="white">#FFFFFFFF</color>
     <color name="light_green">#D4EDDA</color>
     <color name="light_red">#F8D7DA</color>
+    <color name="colorOnBackground">#000000</color>
 
     <!-- Цвета для светлой темы -->
     <color name="your_primary_color">#FF6200EE</color>

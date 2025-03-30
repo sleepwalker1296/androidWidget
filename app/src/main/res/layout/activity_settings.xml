@@ -4,14 +4,28 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?attr/colorBackground"
-    android:fitsSystemWindows="true"> <!-- Добавлен этот атрибут -->
+    android:fitsSystemWindows="true">
 
-    <!-- Панель заголовка с кнопкой назад -->
+    <!-- Шапка с надписью "Настройки" -->
+    <TextView
+        android:id="@+id/header_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Настройки"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="?attr/colorOnPrimary"
+        android:background="?attr/colorPrimary"
+        android:padding="16dp"
+        android:gravity="center_vertical"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <!-- Панель с кнопкой назад -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/header_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toBottomOf="@id/header_title">
 
         <!-- Кнопка "Назад" -->
         <com.google.android.material.button.MaterialButton
@@ -26,20 +40,6 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             android:layout_marginTop="16dp"
-            android:layout_marginStart="16dp"/>
-
-        <!-- Заголовок "Настройки" -->
-        <TextView
-            android:id="@+id/textView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Настройки"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="?attr/colorPrimary"
-            app:layout_constraintTop_toTopOf="@id/back_button"
-            app:layout_constraintBottom_toBottomOf="@id/back_button"
-            app:layout_constraintStart_toEndOf="@id/back_button"
             android:layout_marginStart="16dp"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
