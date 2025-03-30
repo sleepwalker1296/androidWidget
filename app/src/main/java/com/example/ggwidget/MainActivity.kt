@@ -60,6 +60,7 @@ class MainActivity : AppCompatActivity() {
             topMargin = getStatusBarHeight()
         }
 
+        // Инициализация TextView
         priceTextView = findViewById(R.id.price_usd)
         priceTonTextView = findViewById(R.id.price_ton)
         fdvTextView = findViewById(R.id.fdv_usd)
@@ -71,6 +72,7 @@ class MainActivity : AppCompatActivity() {
         change12hTextView = findViewById(R.id.change_12h)
         changeDayTextView = findViewById(R.id.change_day)
 
+        // Настройка кнопки настроек
         val settingsButton = findViewById<ImageView>(R.id.settings_button)
         settingsButton.setOnClickListener {
             val animation = AnimationUtils.loadAnimation(this, R.anim.rotate)
@@ -85,11 +87,60 @@ class MainActivity : AppCompatActivity() {
             settingsButton.startAnimation(animation)
         }
 
+        // Восстановление данных из сохранённого состояния или кэша
         val prefs = getSharedPreferences("price_cache", MODE_PRIVATE)
-        Log.d("MainActivity", "Cached values: ${prefs.all}")
-        updateUIFromCache(prefs)
+        if (savedInstanceState != null) {
+            restoreFromSavedState(savedInstanceState)
+        } else {
+            updateUIFromCache(prefs)
+        }
+
         fetchAndUpdateData() // Первый запрос
         handler.post(updateRunnable) // Запускаем обновление каждую минуту
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Сохранение текущих значений перед пересозданием
+        outState.putString("price_usd", priceTextView.text.toString())
+        outState.putString("price_ton", priceTonTextView.text.toString())
+        outState.putString("fdv_usd", fdvTextView.text.toString())
+        outState.putString("liquidity", liquidityTextView.text.toString())
+        outState.putString("holders", holdersTextView.text.toString())
+        outState.putString("market_cap", marketCapTextView.text.toString())
+        outState.putString("change_1h", change1hTextView.text.toString())
+        outState.putString("change_6h", change6hTextView.text.toString())
+        outState.putString("change_12h", change12hTextView.text.toString())
+        outState.putString("change_day", changeDayTextView.text.toString())
+    }
+
+    private fun restoreFromSavedState(savedInstanceState: Bundle) {
+        priceTextView.text = savedInstanceState.getString("price_usd", "$ 12,34")
+        priceTonTextView.text = savedInstanceState.getString("price_ton", "11,23")
+        fdvTextView.text = savedInstanceState.getString("fdv_usd", "100B")
+        liquidityTextView.text = savedInstanceState.getString("liquidity", "5M")
+        holdersTextView.text = savedInstanceState.getString("holders", "0")
+        marketCapTextView.text = savedInstanceState.getString("market_cap", "777 777")
+
+        val change1h = savedInstanceState.getString("change_1h", "0.0%")?.let { parsePercentage(it) } ?: 0.0
+        val change6h = savedInstanceState.getString("change_6h", "0.0%")?.let { parsePercentage(it) } ?: 0.0
+        val change12h = savedInstanceState.getString("change_12h", "0.0%")?.let { parsePercentage(it) } ?: 0.0
+        val changeDay = savedInstanceState.getString("change_day", "0.0%")?.let { parsePercentage(it) } ?: 0.0
+
+        change1hTextView.text = formatPercentage(change1h)
+        change6hTextView.text = formatPercentage(change6h)
+        change12hTextView.text = formatPercentage(change12h)
+        changeDayTextView.text = formatPercentage(changeDay)
+
+        setTextColor(change1hTextView, change1h)
+        setTextColor(change6hTextView, change6h)
+        setTextColor(change12hTextView, change12h)
+        setTextColor(changeDayTextView, changeDay)
+
+        setBackgroundColor(change1hTextView, change1h)
+        setBackgroundColor(change6hTextView, change6h)
+        setBackgroundColor(change12hTextView, change12h)
+        setBackgroundColor(changeDayTextView, changeDay)
     }
 
     override fun onDestroy() {
@@ -108,7 +159,9 @@ class MainActivity : AppCompatActivity() {
                 }
                 apply()
             }
-            runOnUiThread { updateUIFromCache(prefs) }
+            if (!isFinishing && !isDestroyed) {
+                runOnUiThread { updateUIFromCache(prefs) }
+            }
         }
     }
 
@@ -124,52 +177,49 @@ class MainActivity : AppCompatActivity() {
             val jettonBody = jettonResponse.body?.string() ?: "{}"
             Log.d("MainActivity", "Jetton API response: $jettonBody")
 
-            val jettonData = if (jettonResponse.code == 429) {
-                Log.w("MainActivity", "Jetton API: Too many requests")
-                mapOf(
-                    "price_usd" to "Слишком много запросов",
-                    "price" to "Слишком много запросов",
-                    "fdv_usd" to "Слишком много запросов",
-                    "liquidityUsd" to "Слишком много запросов",
-                    "holders" to "Слишком много запросов",
-                    "market_cap" to "Слишком много запросов"
-                )
-            } else if (jettonResponse.code == 401) {
-                Log.w("MainActivity", "Jetton API: Unauthorized")
-                mapOf(
-                    "price_usd" to "Ошибка авторизации",
-                    "price" to "Ошибка авторизации",
-                    "fdv_usd" to "Ошибка авторизации",
-                    "liquidityUsd" to "Ошибка авторизации",
-                    "holders" to "Ошибка авторизации",
-                    "market_cap" to "Ошибка авторизации"
-                )
-            } else {
-                val jettonJson = JSONObject(jettonBody)
-                val detailsJson = jettonJson.optJSONObject("details") ?: JSONObject()
-
-                mapOf(
-                    "price_usd" to formatPrice(
-                        (detailsJson.optJSONObject("priceUsd")?.optString("value", "0")?.toDouble() ?: 0.0) /
-                                Math.pow(10.0, detailsJson.optJSONObject("priceUsd")?.optInt("decimals", 6)?.toDouble() ?: 6.0)
-                    ),
-                    "price" to formatTonPrice(
-                        (detailsJson.optJSONObject("price")?.optString("value", "0")?.toDouble() ?: 0.0) /
-                                Math.pow(10.0, detailsJson.optJSONObject("price")?.optInt("decimals", 9)?.toDouble() ?: 9.0)
-                    ),
-                    "fdv_usd" to formatMarketCap(
-                        (detailsJson.optJSONObject("fdmc")?.optString("value", "0")?.toDouble() ?: 0.0) /
-                                Math.pow(10.0, detailsJson.optJSONObject("fdmc")?.optInt("decimals", 6)?.toDouble() ?: 6.0)
-                    ),
-                    "liquidityUsd" to formatLiquidity(
-                        (detailsJson.optJSONObject("liquidityUsd")?.optString("value", "0")?.toDouble() ?: 0.0) /
-                                Math.pow(10.0, detailsJson.optJSONObject("liquidityUsd")?.optInt("decimals", 6)?.toDouble() ?: 6.0)
-                    ),
-                    "holders" to detailsJson.optString("holdersCount", "0"),
-                    "market_cap" to formatSupply(
-                        detailsJson.optString("totalSupply", "0").toDouble() / Math.pow(10.0, 9.0)
+            val jettonData = when (jettonResponse.code) {
+                429 -> {
+                    Log.w("MainActivity", "Jetton API: Too many requests")
+                    return getCachedOrDefaultData() // Возвращаем кэшированные данные вместо ошибки
+                }
+                401 -> {
+                    Log.w("MainActivity", "Jetton API: Unauthorized")
+                    mapOf(
+                        "price_usd" to "Ошибка авторизации",
+                        "price" to "Ошибка авторизации",
+                        "fdv_usd" to "Ошибка авторизации",
+                        "liquidityUsd" to "Ошибка авторизации",
+                        "holders" to "Ошибка авторизации",
+                        "market_cap" to "Ошибка авторизации"
                     )
-                )
+                }
+                else -> {
+                    val jettonJson = JSONObject(jettonBody)
+                    val detailsJson = jettonJson.optJSONObject("details") ?: JSONObject()
+
+                    mapOf(
+                        "price_usd" to formatPrice(
+                            (detailsJson.optJSONObject("priceUsd")?.optString("value", "0")?.toDouble() ?: 0.0) /
+                                    Math.pow(10.0, detailsJson.optJSONObject("priceUsd")?.optInt("decimals", 6)?.toDouble() ?: 6.0)
+                        ),
+                        "price" to formatTonPrice(
+                            (detailsJson.optJSONObject("price")?.optString("value", "0")?.toDouble() ?: 0.0) /
+                                    Math.pow(10.0, detailsJson.optJSONObject("price")?.optInt("decimals", 9)?.toDouble() ?: 9.0)
+                        ),
+                        "fdv_usd" to formatMarketCap(
+                            (detailsJson.optJSONObject("fdmc")?.optString("value", "0")?.toDouble() ?: 0.0) /
+                                    Math.pow(10.0, detailsJson.optJSONObject("fdmc")?.optInt("decimals", 6)?.toDouble() ?: 6.0)
+                        ),
+                        "liquidityUsd" to formatLiquidity(
+                            (detailsJson.optJSONObject("liquidityUsd")?.optString("value", "0")?.toDouble() ?: 0.0) /
+                                    Math.pow(10.0, detailsJson.optJSONObject("liquidityUsd")?.optInt("decimals", 6)?.toDouble() ?: 6.0)
+                        ),
+                        "holders" to detailsJson.optString("holdersCount", "0"),
+                        "market_cap" to formatSupply(
+                            detailsJson.optString("totalSupply", "0").toDouble() / Math.pow(10.0, 9.0)
+                        )
+                    )
+                }
             }
 
             // Запрос к API статистики
@@ -182,59 +232,68 @@ class MainActivity : AppCompatActivity() {
             val statsBody = statsResponse.body?.string() ?: "{}"
             Log.d("MainActivity", "Stats API response: $statsBody")
 
-            val statsData = if (statsResponse.code == 429) {
-                Log.w("MainActivity", "Stats API: Too many requests")
-                mapOf(
-                    "change_1h" to "0",
-                    "change_6h" to "0",
-                    "change_12h" to "0",
-                    "change_day" to "0"
-                )
-            } else if (statsResponse.code == 401) {
-                Log.w("MainActivity", "Stats API: Unauthorized")
-                mapOf(
-                    "change_1h" to "0",
-                    "change_6h" to "0",
-                    "change_12h" to "0",
-                    "change_day" to "0"
-                )
-            } else {
-                val statsJson = JSONObject(statsBody)
-                val priceChangeJson = statsJson.optJSONObject("priceChange")?.optJSONObject("ton") ?: JSONObject()
+            val statsData = when (statsResponse.code) {
+                429 -> {
+                    Log.w("MainActivity", "Stats API: Too many requests")
+                    mapOf(
+                        "change_1h" to "0",
+                        "change_6h" to "0",
+                        "change_12h" to "0",
+                        "change_day" to "0"
+                    )
+                }
+                401 -> {
+                    Log.w("MainActivity", "Stats API: Unauthorized")
+                    mapOf(
+                        "change_1h" to "0",
+                        "change_6h" to "0",
+                        "change_12h" to "0",
+                        "change_day" to "0"
+                    )
+                }
+                else -> {
+                    val statsJson = JSONObject(statsBody)
+                    val priceChangeJson = statsJson.optJSONObject("priceChange")?.optJSONObject("ton") ?: JSONObject()
 
-                mapOf(
-                    "change_1h" to (priceChangeJson.optJSONObject("hour")?.optDouble("changePercent", 0.0) ?: 0.0).toString(),
-                    "change_6h" to (priceChangeJson.optJSONObject("hour6")?.optDouble("changePercent", 0.0) ?: 0.0).toString(),
-                    "change_12h" to (priceChangeJson.optJSONObject("hour12")?.optDouble("changePercent", 0.0) ?: 0.0).toString(),
-                    "change_day" to (priceChangeJson.optJSONObject("day")?.optDouble("changePercent", 0.0) ?: 0.0).toString()
-                )
+                    mapOf(
+                        "change_1h" to (priceChangeJson.optJSONObject("hour")?.optDouble("changePercent", 0.0) ?: 0.0).toString(),
+                        "change_6h" to (priceChangeJson.optJSONObject("hour6")?.optDouble("changePercent", 0.0) ?: 0.0).toString(),
+                        "change_12h" to (priceChangeJson.optJSONObject("hour12")?.optDouble("changePercent", 0.0) ?: 0.0).toString(),
+                        "change_day" to (priceChangeJson.optJSONObject("day")?.optDouble("changePercent", 0.0) ?: 0.0).toString()
+                    )
+                }
             }
 
             return jettonData + statsData
         } catch (e: Exception) {
             Log.e("MainActivity", "Ошибка при запросе данных", e)
-            return mapOf(
-                "price_usd" to "Ошибка",
-                "price" to "Ошибка",
-                "fdv_usd" to "Ошибка",
-                "liquidityUsd" to "Ошибка",
-                "holders" to "Ошибка",
-                "market_cap" to "Ошибка",
-                "change_1h" to "0",
-                "change_6h" to "0",
-                "change_12h" to "0",
-                "change_day" to "0"
-            )
+            return getCachedOrDefaultData() // Возвращаем кэшированные данные вместо ошибки
         }
     }
 
+    private fun getCachedOrDefaultData(): Map<String, String> {
+        val prefs = getSharedPreferences("price_cache", MODE_PRIVATE)
+        return mapOf(
+            "price_usd" to (prefs.getString("price_usd", "$ 12,34") ?: "$ 12,34"),
+            "price" to (prefs.getString("price", "11,23") ?: "11,23"),
+            "fdv_usd" to (prefs.getString("fdv_usd", "100B") ?: "100B"),
+            "liquidityUsd" to (prefs.getString("liquidityUsd", "5M") ?: "5M"),
+            "holders" to (prefs.getString("holders", "0") ?: "0"),
+            "market_cap" to (prefs.getString("market_cap", "777 777") ?: "777 777"),
+            "change_1h" to (prefs.getString("change_1h", "0") ?: "0"),
+            "change_6h" to (prefs.getString("change_6h", "0") ?: "0"),
+            "change_12h" to (prefs.getString("change_12h", "0") ?: "0"),
+            "change_day" to (prefs.getString("change_day", "0") ?: "0")
+        )
+    }
+
     private fun updateUIFromCache(prefs: android.content.SharedPreferences) {
-        priceTextView.text = prefs.getString("price_usd", "0") ?: "0"
-        priceTonTextView.text = prefs.getString("price", "0") ?: "0"
-        fdvTextView.text = prefs.getString("fdv_usd", "0") ?: "0"
-        liquidityTextView.text = prefs.getString("liquidityUsd", "0") ?: "0"
-        holdersTextView.text = prefs.getString("holders", "0") ?: "0"
-        marketCapTextView.text = prefs.getString("market_cap", "0") ?: "0"
+        priceTextView.text = prefs.getString("price_usd", "$ 12,34")
+        priceTonTextView.text = prefs.getString("price", "11,23")
+        fdvTextView.text = prefs.getString("fdv_usd", "100B")
+        liquidityTextView.text = prefs.getString("liquidityUsd", "5M")
+        holdersTextView.text = prefs.getString("holders", "0")
+        marketCapTextView.text = prefs.getString("market_cap", "777 777")
 
         val change1h = prefs.getString("change_1h", "0")?.toDoubleOrNull() ?: 0.0
         val change6h = prefs.getString("change_6h", "0")?.toDoubleOrNull() ?: 0.0
@@ -269,7 +328,7 @@ class MainActivity : AppCompatActivity() {
         return try {
             "$" + DecimalFormat("#0.00").format(price).replace(",", ".")
         } catch (e: Exception) {
-            "Ошибка"
+            "$ 12,34" // Значение по умолчанию
         }
     }
 
@@ -277,7 +336,7 @@ class MainActivity : AppCompatActivity() {
         return try {
             DecimalFormat("#0.00").format(price).replace(",", ".")
         } catch (e: Exception) {
-            "Ошибка"
+            "11,23" // Значение по умолчанию
         }
     }
 
@@ -289,7 +348,7 @@ class MainActivity : AppCompatActivity() {
                 else -> "$${DecimalFormat("#0.00").format(value)}"
             }
         } catch (e: Exception) {
-            "Ошибка"
+            "100B" // Значение по умолчанию
         }
     }
 
@@ -298,7 +357,7 @@ class MainActivity : AppCompatActivity() {
             val dfs = DecimalFormatSymbols(Locale.US).apply { groupingSeparator = ' '; decimalSeparator = ',' }
             DecimalFormat("$ #,##0.00", dfs).format(value)
         } catch (e: Exception) {
-            "Ошибка"
+            "5M" // Значение по умолчанию
         }
     }
 
@@ -306,7 +365,7 @@ class MainActivity : AppCompatActivity() {
         return try {
             DecimalFormat("#,##0").format(value).replace(",", " ")
         } catch (e: Exception) {
-            "Ошибка"
+            "777 777" // Значение по умолчанию
         }
     }
 
@@ -316,6 +375,10 @@ class MainActivity : AppCompatActivity() {
             value < 0 -> "${DecimalFormat("#0.0").format(value)}%"
             else -> "0.0%"
         }
+    }
+
+    private fun parsePercentage(text: String): Double {
+        return text.replace("[^0-9.-]".toRegex(), "").toDoubleOrNull() ?: 0.0
     }
 
     private fun setTextColor(textView: TextView, value: Double) {
