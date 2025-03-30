@@ -11,4 +11,5 @@
     <color name="light_green">#DFF6DD</color>
     <color name="light_red">#F8D7DA</color>
     <color name="colorOnBackground">#E7E7E7</color>
+    <color name="colorOnSurface">#1e1e1f</color>
 </resources>

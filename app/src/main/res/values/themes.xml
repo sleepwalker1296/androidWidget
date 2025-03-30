@@ -9,7 +9,7 @@
         <item name="colorOnSecondary">@color/black</item>
 
         <item name="colorSurface">@color/your_surface_color</item>
-        <item name="colorOnSurface">@color/your_on_surface_color</item>
+        <item name="colorOnSurface">#F2F2F2</item>
         <item name="colorBackground">@color/your_background_color</item>
         <item name="colorOnBackground">@color/your_text_primary</item>
 
