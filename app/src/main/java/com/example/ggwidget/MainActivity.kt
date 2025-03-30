@@ -3,9 +3,11 @@ package com.example.ggwidget
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.ViewGroup
-import android.widget.Button
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -19,6 +21,8 @@ import org.json.JSONObject
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
 
 class MainActivity : AppCompatActivity() {
 
@@ -27,19 +31,24 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fdvTextView: TextView
     private lateinit var liquidityTextView: TextView
     private lateinit var holdersTextView: TextView
-    private lateinit var change30mTextView: TextView
+    private lateinit var marketCapTextView: TextView
     private lateinit var change1hTextView: TextView
     private lateinit var change6hTextView: TextView
-    private lateinit var change24hTextView: TextView
+    private lateinit var change12hTextView: TextView
+    private lateinit var changeDayTextView: TextView
 
-    private val poolUrls = listOf(
-        "https://api.geckoterminal.com/api/v2/networks/ton/pools/EQAf2LUJZMdxSAGhlp-A60AN9bqZeVM994vCOXH05JFo-7dc",
-        "https://api.geckoterminal.com/api/v2/networks/ton/pools/EQBJNKIIuskkvRxd5EHdfpNTtqbJoJWVbt7NI0WTeQ_2VJE3",
-        "https://api.geckoterminal.com/api/v2/networks/ton/pools/EQBTFsnv95SKXSjTQV_uApIVNHqTL1Ye4CE42HPIcS7nszlO",
-        "https://api.geckoterminal.com/api/v2/networks/ton/pools/EQAoJ9eh8MoKzErNE86N1uHzp4Eskth5Od5tDEYgS5mVU_Fj"
-    )
     private val jettonUrl = "https://api.dyor.io/v1/jettons/EQBlWgKnh_qbFYTXfKgGAQPxkxFsArDOSr9nlARSzydpNPwA"
+    private val statsUrl = "https://api.dyor.io/v1/jettons/EQBlWgKnh_qbFYTXfKgGAQPxkxFsArDOSr9nlARSzydpNPwA/stats"
+    private val apiKey = "eyJhbGciOiJIUzI1NiIsImtuIjowLCJ0eXAiOiJKV1QifQ.eyJkYXRhIjp7ImlkIjo0OCwidmVyc2lvbiI6MH19.IQ3w_9DY4x9NPtwcwLhVXEvXCyqyObjW2DX7QS0F1L0"
     private val client = OkHttpClient()
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val updateRunnable = object : Runnable {
+        override fun run() {
+            fetchAndUpdateData()
+            handler.postDelayed(this, 60_000) // 60 секунд
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applyThemeFromPreferences()
@@ -56,36 +65,47 @@ class MainActivity : AppCompatActivity() {
         fdvTextView = findViewById(R.id.fdv_usd)
         liquidityTextView = findViewById(R.id.liquidity)
         holdersTextView = findViewById(R.id.holders)
-        change30mTextView = findViewById(R.id.change_30m)
+        marketCapTextView = findViewById(R.id.market_cap)
         change1hTextView = findViewById(R.id.change_1h)
         change6hTextView = findViewById(R.id.change_6h)
-        change24hTextView = findViewById(R.id.change_24h)
+        change12hTextView = findViewById(R.id.change_12h)
+        changeDayTextView = findViewById(R.id.change_day)
 
-        findViewById<Button>(R.id.settings_button).setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
-            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+        val settingsButton = findViewById<ImageView>(R.id.settings_button)
+        settingsButton.setOnClickListener {
+            val animation = AnimationUtils.loadAnimation(this, R.anim.rotate)
+            animation.setAnimationListener(object : Animation.AnimationListener {
+                override fun onAnimationStart(animation: Animation?) {}
+                override fun onAnimationEnd(animation: Animation?) {
+                    startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+                    overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+                }
+                override fun onAnimationRepeat(animation: Animation?) {}
+            })
+            settingsButton.startAnimation(animation)
         }
 
-        // Показываем кэшированные данные сразу
         val prefs = getSharedPreferences("price_cache", MODE_PRIVATE)
+        Log.d("MainActivity", "Cached values: ${prefs.all}")
         updateUIFromCache(prefs)
-        fetchAndUpdateData()
+        fetchAndUpdateData() // Первый запрос
+        handler.post(updateRunnable) // Запускаем обновление каждую минуту
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        handler.removeCallbacks(updateRunnable) // Останавливаем обновление при закрытии
     }
 
     private fun fetchAndUpdateData() {
         lifecycleScope.launch(Dispatchers.IO) {
             val data = fetchDataFromAPI()
+            Log.d("MainActivity", "Fetched data: $data")
             val prefs = getSharedPreferences("price_cache", MODE_PRIVATE)
             with(prefs.edit()) {
-                putString("price_usd", data["price_usd"])
-                putString("price_ton", data["price_ton"])
-                putString("fdv_usd", data["fdv_usd"])
-                putString("liquidity", data["liquidity"])
-                putString("holders", data["holders"])
-                putString("change_30m", data["change_30m"])
-                putString("change_1h", data["change_1h"])
-                putString("change_6h", data["change_6h"])
-                putString("change_24h", data["change_24h"])
+                data.forEach { (key, value) ->
+                    putString(key, value)
+                }
                 apply()
             }
             runOnUiThread { updateUIFromCache(prefs) }
@@ -93,100 +113,148 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun fetchDataFromAPI(): Map<String, String> {
-        return try {
-            var totalLiquidity = 0.0
-            var priceUsd = "0"
-            var priceTon = "0"
-            var fdvUsd = "0.0"
-            var holdersCount = "0"
-            var change30m = "0.0"
-            var change1h = "0.0"
-            var change6h = "0.0"
-            var change24h = "0.0"
-
-            for (url in poolUrls) {
-                val request = Request.Builder().url(url).build()
-                val response = client.newCall(request).execute()
-                if (!response.isSuccessful) continue
-
-                val json = JSONObject(response.body?.string() ?: "{}")
-                val attributes = json.getJSONObject("data").getJSONObject("attributes")
-                totalLiquidity += attributes.optDouble("reserve_in_usd", 0.0)
-
-                if (url == poolUrls[0]) {
-                    priceUsd = formatPrice(attributes.optString("base_token_price_usd", "0"))
-                    priceTon = formatPrice(attributes.optString("base_token_price_native_currency", "0"))
-                    fdvUsd = formatMarketCap(attributes.optDouble("fdv_usd", 0.0))
-                    val priceChanges = attributes.getJSONObject("price_change_percentage")
-                    change30m = priceChanges.optDouble("m30", 0.0).toString()
-                    change1h = priceChanges.optDouble("h1", 0.0).toString()
-                    change6h = priceChanges.optDouble("h6", 0.0).toString()
-                    change24h = priceChanges.optDouble("h24", 0.0).toString()
-                }
-            }
-
-            val jettonRequest = Request.Builder().url(jettonUrl).header("accept", "application/json").build()
+        try {
+            // Запрос к основному API
+            val jettonRequest = Request.Builder()
+                .url(jettonUrl)
+                .header("accept", "application/json")
+                .header("Authorization", "Bearer $apiKey")
+                .build()
             val jettonResponse = client.newCall(jettonRequest).execute()
-            if (jettonResponse.isSuccessful) {
-                val jettonJson = JSONObject(jettonResponse.body?.string() ?: "{}")
+            val jettonBody = jettonResponse.body?.string() ?: "{}"
+            Log.d("MainActivity", "Jetton API response: $jettonBody")
+
+            val jettonData = if (jettonResponse.code == 429) {
+                Log.w("MainActivity", "Jetton API: Too many requests")
+                mapOf(
+                    "price_usd" to "Слишком много запросов",
+                    "price" to "Слишком много запросов",
+                    "fdv_usd" to "Слишком много запросов",
+                    "liquidityUsd" to "Слишком много запросов",
+                    "holders" to "Слишком много запросов",
+                    "market_cap" to "Слишком много запросов"
+                )
+            } else if (jettonResponse.code == 401) {
+                Log.w("MainActivity", "Jetton API: Unauthorized")
+                mapOf(
+                    "price_usd" to "Ошибка авторизации",
+                    "price" to "Ошибка авторизации",
+                    "fdv_usd" to "Ошибка авторизации",
+                    "liquidityUsd" to "Ошибка авторизации",
+                    "holders" to "Ошибка авторизации",
+                    "market_cap" to "Ошибка авторизации"
+                )
+            } else {
+                val jettonJson = JSONObject(jettonBody)
                 val detailsJson = jettonJson.optJSONObject("details") ?: JSONObject()
-                holdersCount = detailsJson.optString("holdersCount", "0")
+
+                mapOf(
+                    "price_usd" to formatPrice(
+                        (detailsJson.optJSONObject("priceUsd")?.optString("value", "0")?.toDouble() ?: 0.0) /
+                                Math.pow(10.0, detailsJson.optJSONObject("priceUsd")?.optInt("decimals", 6)?.toDouble() ?: 6.0)
+                    ),
+                    "price" to formatTonPrice(
+                        (detailsJson.optJSONObject("price")?.optString("value", "0")?.toDouble() ?: 0.0) /
+                                Math.pow(10.0, detailsJson.optJSONObject("price")?.optInt("decimals", 9)?.toDouble() ?: 9.0)
+                    ),
+                    "fdv_usd" to formatMarketCap(
+                        (detailsJson.optJSONObject("fdmc")?.optString("value", "0")?.toDouble() ?: 0.0) /
+                                Math.pow(10.0, detailsJson.optJSONObject("fdmc")?.optInt("decimals", 6)?.toDouble() ?: 6.0)
+                    ),
+                    "liquidityUsd" to formatLiquidity(
+                        (detailsJson.optJSONObject("liquidityUsd")?.optString("value", "0")?.toDouble() ?: 0.0) /
+                                Math.pow(10.0, detailsJson.optJSONObject("liquidityUsd")?.optInt("decimals", 6)?.toDouble() ?: 6.0)
+                    ),
+                    "holders" to detailsJson.optString("holdersCount", "0"),
+                    "market_cap" to formatSupply(
+                        detailsJson.optString("totalSupply", "0").toDouble() / Math.pow(10.0, 9.0)
+                    )
+                )
             }
 
-            val liquidityFormatted = formatLiquidity(totalLiquidity)
-            mapOf(
-                "price_usd" to priceUsd,
-                "price_ton" to priceTon,
-                "fdv_usd" to fdvUsd,
-                "liquidity" to liquidityFormatted,
-                "holders" to holdersCount,
-                "change_30m" to change30m,
-                "change_1h" to change1h,
-                "change_6h" to change6h,
-                "change_24h" to change24h
-            )
+            // Запрос к API статистики
+            val statsRequest = Request.Builder()
+                .url(statsUrl)
+                .header("accept", "application/json")
+                .header("Authorization", "Bearer $apiKey")
+                .build()
+            val statsResponse = client.newCall(statsRequest).execute()
+            val statsBody = statsResponse.body?.string() ?: "{}"
+            Log.d("MainActivity", "Stats API response: $statsBody")
+
+            val statsData = if (statsResponse.code == 429) {
+                Log.w("MainActivity", "Stats API: Too many requests")
+                mapOf(
+                    "change_1h" to "0",
+                    "change_6h" to "0",
+                    "change_12h" to "0",
+                    "change_day" to "0"
+                )
+            } else if (statsResponse.code == 401) {
+                Log.w("MainActivity", "Stats API: Unauthorized")
+                mapOf(
+                    "change_1h" to "0",
+                    "change_6h" to "0",
+                    "change_12h" to "0",
+                    "change_day" to "0"
+                )
+            } else {
+                val statsJson = JSONObject(statsBody)
+                val priceChangeJson = statsJson.optJSONObject("priceChange")?.optJSONObject("ton") ?: JSONObject()
+
+                mapOf(
+                    "change_1h" to (priceChangeJson.optJSONObject("hour")?.optDouble("changePercent", 0.0) ?: 0.0).toString(),
+                    "change_6h" to (priceChangeJson.optJSONObject("hour6")?.optDouble("changePercent", 0.0) ?: 0.0).toString(),
+                    "change_12h" to (priceChangeJson.optJSONObject("hour12")?.optDouble("changePercent", 0.0) ?: 0.0).toString(),
+                    "change_day" to (priceChangeJson.optJSONObject("day")?.optDouble("changePercent", 0.0) ?: 0.0).toString()
+                )
+            }
+
+            return jettonData + statsData
         } catch (e: Exception) {
             Log.e("MainActivity", "Ошибка при запросе данных", e)
-            mapOf(
+            return mapOf(
                 "price_usd" to "Ошибка",
-                "price_ton" to "Ошибка",
+                "price" to "Ошибка",
                 "fdv_usd" to "Ошибка",
-                "liquidity" to "Ошибка",
+                "liquidityUsd" to "Ошибка",
                 "holders" to "Ошибка",
-                "change_30m" to "0",
+                "market_cap" to "Ошибка",
                 "change_1h" to "0",
                 "change_6h" to "0",
-                "change_24h" to "0"
+                "change_12h" to "0",
+                "change_day" to "0"
             )
         }
     }
 
     private fun updateUIFromCache(prefs: android.content.SharedPreferences) {
         priceTextView.text = prefs.getString("price_usd", "0") ?: "0"
-        priceTonTextView.text = prefs.getString("price_ton", "0") ?: "0"
+        priceTonTextView.text = prefs.getString("price", "0") ?: "0"
         fdvTextView.text = prefs.getString("fdv_usd", "0") ?: "0"
-        liquidityTextView.text = prefs.getString("liquidity", "0") ?: "0"
+        liquidityTextView.text = prefs.getString("liquidityUsd", "0") ?: "0"
         holdersTextView.text = prefs.getString("holders", "0") ?: "0"
+        marketCapTextView.text = prefs.getString("market_cap", "0") ?: "0"
 
-        val change30m = prefs.getString("change_30m", "0")?.toDoubleOrNull() ?: 0.0
         val change1h = prefs.getString("change_1h", "0")?.toDoubleOrNull() ?: 0.0
         val change6h = prefs.getString("change_6h", "0")?.toDoubleOrNull() ?: 0.0
-        val change24h = prefs.getString("change_24h", "0")?.toDoubleOrNull() ?: 0.0
+        val change12h = prefs.getString("change_12h", "0")?.toDoubleOrNull() ?: 0.0
+        val changeDay = prefs.getString("change_day", "0")?.toDoubleOrNull() ?: 0.0
 
-        change30mTextView.text = formatPercentage(change30m)
         change1hTextView.text = formatPercentage(change1h)
         change6hTextView.text = formatPercentage(change6h)
-        change24hTextView.text = formatPercentage(change24h)
+        change12hTextView.text = formatPercentage(change12h)
+        changeDayTextView.text = formatPercentage(changeDay)
 
-        setTextColor(change30mTextView, change30m)
         setTextColor(change1hTextView, change1h)
         setTextColor(change6hTextView, change6h)
-        setTextColor(change24hTextView, change24h)
+        setTextColor(change12hTextView, change12h)
+        setTextColor(changeDayTextView, changeDay)
 
-        setBackgroundColor(change30mTextView, change30m)
         setBackgroundColor(change1hTextView, change1h)
         setBackgroundColor(change6hTextView, change6h)
-        setBackgroundColor(change24hTextView, change24h)
+        setBackgroundColor(change12hTextView, change12h)
+        setBackgroundColor(changeDayTextView, changeDay)
     }
 
     private fun applyThemeFromPreferences() {
@@ -197,25 +265,49 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun formatPrice(price: String): String {
+    private fun formatPrice(price: Double): String {
         return try {
-            "$" + DecimalFormat("#0.00").format(price.toDouble()).replace(",", ".")
+            "$" + DecimalFormat("#0.00").format(price).replace(",", ".")
+        } catch (e: Exception) {
+            "Ошибка"
+        }
+    }
+
+    private fun formatTonPrice(price: Double): String {
+        return try {
+            DecimalFormat("#0.00").format(price).replace(",", ".")
         } catch (e: Exception) {
             "Ошибка"
         }
     }
 
     private fun formatMarketCap(value: Double): String {
-        return when {
-            value >= 1_000_000 -> "$${DecimalFormat("#0.00").format(value / 1_000_000)} млн"
-            value >= 1_000 -> "$${DecimalFormat("#0.00").format(value / 1_000)} тыс."
-            else -> "$${DecimalFormat("#0.00").format(value)}"
+        return try {
+            when {
+                value >= 1_000_000 -> "$${DecimalFormat("#0.00").format(value / 1_000_000)} млн"
+                value >= 1_000 -> "$${DecimalFormat("#0.00").format(value / 1_000)} тыс."
+                else -> "$${DecimalFormat("#0.00").format(value)}"
+            }
+        } catch (e: Exception) {
+            "Ошибка"
         }
     }
 
     private fun formatLiquidity(value: Double): String {
-        val dfs = DecimalFormatSymbols(Locale.US).apply { groupingSeparator = ' '; decimalSeparator = ',' }
-        return DecimalFormat("$ #,##0.00", dfs).format(value)
+        return try {
+            val dfs = DecimalFormatSymbols(Locale.US).apply { groupingSeparator = ' '; decimalSeparator = ',' }
+            DecimalFormat("$ #,##0.00", dfs).format(value)
+        } catch (e: Exception) {
+            "Ошибка"
+        }
+    }
+
+    private fun formatSupply(value: Double): String {
+        return try {
+            DecimalFormat("#,##0").format(value).replace(",", " ")
+        } catch (e: Exception) {
+            "Ошибка"
+        }
     }
 
     private fun formatPercentage(value: Double): String {

@@ -33,16 +33,15 @@ class GGWidget : AppWidgetProvider() {
         return try {
             val client = OkHttpClient()
             val request = Request.Builder()
-                .url("https://api.geckoterminal.com/api/v2/networks/ton/pools/EQAoJ9eh8MoKzErNE86N1uHzp4Eskth5Od5tDEYgS5mVU_Fj")
+                .url("https://api.dyor.io/v1/jettons/EQBlWgKnh_qbFYTXfKgGAQPxkxFsArDOSr9nlARSzydpNPwA")
+                .header("accept", "application/json") // Добавлен заголовок, как в MainActivity
                 .build()
 
             val response = client.newCall(request).execute()
             val json = JSONObject(response.body?.string() ?: "{}")
 
-            val price = json.getJSONObject("data")
-                .getJSONObject("attributes")
-                .getString("base_token_price_usd")
-
+            // Извлекаем цену из объекта details
+            val price = json.optJSONObject("details")?.optString("priceUsd", "0") ?: "0"
             "$${"%.2f".format(price.toFloat())}" // Форматируем цену до 2 знаков после запятой
         } catch (e: Exception) {
             "Ошибка сети"

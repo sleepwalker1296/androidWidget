@@ -5,11 +5,14 @@ import org.json.JSONObject
 import java.io.IOException
 
 object NetworkUtils {
-    private const val API_URL = "https://api.geckoterminal.com/api/v2/networks/ton/pools/EQAoJ9eh8MoKzErNE86N1uHzp4Eskth5Od5tDEYgS5mVU_Fj"
+    private const val API_URL = "https://api.dyor.io/v1/jettons/EQBlWgKnh_qbFYTXfKgGAQPxkxFsArDOSr9nlARSzydpNPwA"
 
     fun fetchCoinPrice(callback: (String) -> Unit) {
         val client = OkHttpClient()
-        val request = Request.Builder().url(API_URL).build()
+        val request = Request.Builder()
+            .url(API_URL)
+            .header("accept", "application/json")
+            .build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
@@ -20,12 +23,14 @@ object NetworkUtils {
                 response.body?.string()?.let { jsonString ->
                     try {
                         val json = JSONObject(jsonString)
-                        val price = json.getJSONObject("data")
-                            .getJSONObject("attributes")
-                            .getJSONObject("reserve_in_usd")
-                            .getString("price")
-
-                        callback("$${"%.2f".format(price.toFloat())}")
+                        val priceUsdValue = json.optJSONObject("details")
+                            ?.optJSONObject("priceUsd")
+                            ?.optString("value", "0") ?: "0"
+                        val decimals = json.optJSONObject("details")
+                            ?.optJSONObject("priceUsd")
+                            ?.optInt("decimals", 6) ?: 6
+                        val priceUsd = priceUsdValue.toDouble() / Math.pow(10.0, decimals.toDouble())
+                        callback("$${"%.2f".format(priceUsd)}")
                     } catch (e: Exception) {
                         callback("Ошибка данных")
                     }

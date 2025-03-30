@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:layout_marginBottom="16dp"
-        android:gravity="center_vertical"> <!-- Выравнивание всех дочерних элементов по вертикали -->
+        android:gravity="center_vertical">
 
         <!-- Левый блок с иконкой и текстами -->
         <LinearLayout
@@ -39,7 +39,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:gravity="start|center_vertical"> <!-- Центрирование текста по вертикали относительно иконки -->
+                android:gravity="start|center_vertical">
 
                 <!-- Горизонтальный контейнер для GOVNO и confirmed -->
                 <LinearLayout
@@ -66,27 +66,27 @@
                 </LinearLayout>
 
                 <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Цена GOVNO"
-                android:textColor="@android:color/darker_gray"
-                android:textSize="14sp"/>
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Цена GOVNO"
+                    android:textColor="@android:color/darker_gray"
+                    android:textSize="14sp"/>
 
             </LinearLayout>
 
         </LinearLayout>
 
-        <!-- Кнопка Настройки справа -->
-        <com.google.android.material.button.MaterialButton
+        <!-- Иконка настроек справа -->
+        <ImageView
             android:id="@+id/settings_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:backgroundTint="?attr/colorSurface"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:src="@drawable/ic_settings"
             android:padding="8dp"
-            android:text="⚙ Настройки"
-            android:textColor="?attr/colorOnSurface"
-            android:textSize="16sp"
-            android:layout_gravity="center_vertical"/> <!-- Выравнивание кнопки по центру вертикали -->
+            android:layout_gravity="center_vertical"
+            android:clickable="true"
+            android:focusable="true"
+            android:scaleType="fitCenter"/>
 
     </LinearLayout>
 
@@ -100,11 +100,10 @@
         <!-- Блок с ценой в USD -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="0dp"
-            android:layout_height="80dp"
+            android:layout_height="100dp"
             android:layout_weight="1"
             app:cardCornerRadius="16dp"
             app:cardElevation="4dp"
-            android:padding="16dp"
             android:layout_marginEnd="8dp"
             app:strokeColor="@android:color/transparent"
             app:strokeWidth="0dp">
@@ -112,25 +111,28 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:gravity="center"
                 android:orientation="vertical"
-                android:gravity="center_horizontal">
+                android:padding="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:gravity="center"
                     android:text="Цена в USD"
+                    android:textColor="@android:color/darker_gray"
                     android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="@android:color/darker_gray"/>
+                    android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/price_usd"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:gravity="center"
                     android:text="$ 12,34"
+                    android:textColor="@android:color/black"
                     android:textSize="28sp"
-                    android:textStyle="bold"
-                    android:textColor="@android:color/black"/>
+                    android:textStyle="bold" />
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
@@ -138,30 +140,29 @@
         <!-- Блок с ценой в TON -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="0dp"
-            android:layout_height="80dp"
+            android:layout_height="100dp"
             android:layout_weight="1"
             app:cardCornerRadius="16dp"
             app:cardElevation="4dp"
-            android:padding="16dp"
             android:layout_marginStart="8dp"
             app:strokeColor="@android:color/transparent"
             app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:orientation="vertical"
-                android:gravity="center_horizontal">
+                android:gravity="center"
+                android:padding="16dp">
 
                 <TextView
-                    android:id="@+id/base_token_price_native_currency"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Цена TON"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="@android:color/darker_gray"
-                    android:gravity="center_horizontal"/>
+                    android:gravity="center"/>
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -184,7 +185,8 @@
                         android:text="11,23"
                         android:textSize="28sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/black"/>
+                        android:textColor="@android:color/black"
+                        android:gravity="center"/>
                 </LinearLayout>
 
             </LinearLayout>
@@ -193,53 +195,13 @@
 
     </LinearLayout>
 
-    <!-- Остальные части layout остаются без изменений -->
+    <!-- Блок изменений цен -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center"
         android:layout_marginTop="16dp">
-
-        <!-- 30 мин -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="0dp"
-            android:layout_height="60dp"
-            android:layout_weight="1"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@android:color/darker_gray"
-            app:strokeWidth="1dp"
-            android:padding="8dp"
-            android:gravity="center"
-            android:layout_marginEnd="8dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:gravity="center">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="30 мин"
-                    android:textSize="14sp"
-                    android:textColor="@android:color/darker_gray"
-                    android:gravity="center"/>
-
-                <TextView
-                    android:id="@+id/change_30m"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="-0.2%"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="#FF0000"
-                    android:gravity="center"/>
-            </LinearLayout>
-
-        </com.google.android.material.card.MaterialCardView>
 
         <!-- 1 час -->
         <com.google.android.material.card.MaterialCardView
@@ -272,7 +234,7 @@
                     android:id="@+id/change_1h"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="-2%"
+                    android:text="0.0%"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="#FF0000"
@@ -312,7 +274,7 @@
                     android:id="@+id/change_6h"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="-3.7%"
+                    android:text="0.0%"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="#FF0000"
@@ -321,7 +283,47 @@
 
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 24 часа -->
+        <!-- 12 часов -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@android:color/darker_gray"
+            app:strokeWidth="1dp"
+            android:padding="8dp"
+            android:gravity="center"
+            android:layout_marginEnd="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="12 часов"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/darker_gray"
+                    android:gravity="center"/>
+
+                <TextView
+                    android:id="@+id/change_12h"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0.0%"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#FF0000"
+                    android:gravity="center"/>
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- День -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="0dp"
             android:layout_height="60dp"
@@ -348,10 +350,10 @@
                     android:gravity="center"/>
 
                 <TextView
-                    android:id="@+id/change_24h"
+                    android:id="@+id/change_day"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="-4.9%"
+                    android:text="0.0%"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="#FF0000"
@@ -362,7 +364,7 @@
 
     </LinearLayout>
 
-    <!-- Новый контейнер для блоков Рыночная капитализация и Ликвидность -->
+    <!-- Контейнер для блоков Рыночная капитализация и Ликвидность -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -451,7 +453,7 @@
 
     </LinearLayout>
 
-    <!-- Новый контейнер для блоков Общее предложение и Держатели -->
+    <!-- Контейнер для блоков Общее предложение и Держатели -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
