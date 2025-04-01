@@ -50,14 +50,19 @@ class MainActivity : AppCompatActivity() {
 
     private val jettonUrl = "https://api.dyor.io/v1/jettons/EQBlWgKnh_qbFYTXfKgGAQPxkxFsArDOSr9nlARSzydpNPwA"
     private val statsUrl = "https://api.dyor.io/v1/jettons/EQBlWgKnh_qbFYTXfKgGAQPxkxFsArDOSr9nlARSzydpNPwA/stats"
-    private val apiKey = "eyJhbGciOiJIUzI1NiIsImtuIjowLCJ0eXAiOiJKV1QifQ.eyJkYXRhIjp7ImlkIjo0OCwidmVyc2lvbiI6Mn19.S3-WcrUehqy00pLsOhu81iwdirMJ7eYxBB6HgezzZmI"
     private val client = OkHttpClient()
 
     private val handler = Handler(Looper.getMainLooper())
-    private val updateRunnable = object : Runnable {
+    private val jettonUpdateRunnable = object : Runnable {
         override fun run() {
-            fetchAndUpdateData()
-            handler.postDelayed(this, 60_000)
+            fetchJettonData()
+            handler.postDelayed(this, 60_000) // 60 секунд
+        }
+    }
+    private val statsUpdateRunnable = object : Runnable {
+        override fun run() {
+            fetchStatsData()
+            handler.postDelayed(this, 62_000) // 62 секунды
         }
     }
 
@@ -92,10 +97,12 @@ class MainActivity : AppCompatActivity() {
         // Инициализация WebView
         webView = findViewById(R.id.webView)
         webView.settings.javaScriptEnabled = true
-        webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE // Отключаем кэш
+        webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE
         webView.setBackgroundColor(
             resources.getColor(if (isDarkTheme) android.R.color.black else android.R.color.white, theme)
         )
+        webView.isVerticalScrollBarEnabled = false // Отключаем прокрутку
+        webView.isHorizontalScrollBarEnabled = false
         webView.addJavascriptInterface(object : Any() {
             @JavascriptInterface
             fun setTheme(isDarkTheme: String) {}
@@ -159,11 +166,14 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState != null) {
             restoreFromSavedState(savedInstanceState)
         } else {
-            updateUIFromCache(pricePrefs)
+            updateUIFromCache(pricePrefs) // Восстанавливаем из кэша при запуске
         }
 
-        fetchAndUpdateData()
-        handler.post(updateRunnable)
+        // Запускаем обновления
+        fetchJettonData() // Начальный запрос
+        fetchStatsData()  // Начальный запрос
+        handler.post(jettonUpdateRunnable)
+        handler.post(statsUpdateRunnable)
     }
 
     private fun updateBackgroundAndChart(isDarkTheme: Boolean) {
@@ -178,18 +188,19 @@ class MainActivity : AppCompatActivity() {
             }
             Log.d("MainActivity", "Background updated to $isDarkTheme")
         }
-        // Принудительное обновление темы с задержкой
         handler.postDelayed({
             webView.evaluateJavascript("AndroidInterface.setTheme('$isDarkTheme')") { result ->
                 Log.d("WebView", "Результат вызова setTheme: $result")
+                webView.invalidate()
             }
         }, 200)
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        handler.removeCallbacks(updateRunnable)
-        unregisterReceiver(themeChangeReceiver)
+    override fun onPause() {
+        super.onPause()
+        // Останавливаем обновления при сворачивании
+        handler.removeCallbacks(jettonUpdateRunnable)
+        handler.removeCallbacks(statsUpdateRunnable)
     }
 
     override fun onResume() {
@@ -198,6 +209,17 @@ class MainActivity : AppCompatActivity() {
         val isDarkTheme = prefs.getBoolean("dark_theme", false)
         Log.d("MainActivity", "onResume: Current theme = $isDarkTheme")
         updateBackgroundAndChart(isDarkTheme)
+        updateUIFromCache(prefs) // Восстанавливаем данные из кэша
+        // Возобновляем обновления
+        handler.post(jettonUpdateRunnable)
+        handler.post(statsUpdateRunnable)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        handler.removeCallbacks(jettonUpdateRunnable)
+        handler.removeCallbacks(statsUpdateRunnable)
+        unregisterReceiver(themeChangeReceiver)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -243,112 +265,113 @@ class MainActivity : AppCompatActivity() {
         setBackgroundColor(changeDayTextView, changeDay)
     }
 
-    private fun fetchAndUpdateData() {
+    private fun fetchJettonData() {
         lifecycleScope.launch(Dispatchers.IO) {
-            val data = fetchDataFromAPI()
-            Log.d("MainActivity", "Fetched data: $data")
-            val prefs = getSharedPreferences("price_cache", MODE_PRIVATE)
-            with(prefs.edit()) {
-                data.forEach { (key, value) -> putString(key, value) }
-                apply()
-            }
-            if (!isFinishing && !isDestroyed) {
-                runOnUiThread { updateUIFromCache(prefs) }
+            try {
+                val jettonRequest = Request.Builder()
+                    .url(jettonUrl)
+                    .header("accept", "application/json")
+                    .build()
+                val jettonResponse = client.newCall(jettonRequest).execute()
+                val jettonBody = jettonResponse.body?.string() ?: "{}"
+                Log.d("MainActivity", "Jetton API response: $jettonBody")
+
+                val jettonData = when (jettonResponse.code) {
+                    429 -> {
+                        Log.w("MainActivity", "Jetton API: Too many requests")
+                        getCachedOrDefaultData()
+                    }
+                    else -> {
+                        val jettonJson = JSONObject(jettonBody)
+                        val detailsJson = jettonJson.optJSONObject("details") ?: JSONObject()
+
+                        mapOf(
+                            "price_usd" to formatPrice(
+                                (detailsJson.optJSONObject("priceUsd")?.optString("value", "0")?.toDouble() ?: 0.0) /
+                                        Math.pow(10.0, detailsJson.optJSONObject("priceUsd")?.optInt("decimals", 6)?.toDouble() ?: 6.0)
+                            ),
+                            "price" to formatTonPrice(
+                                (detailsJson.optJSONObject("price")?.optString("value", "0")?.toDouble() ?: 0.0) /
+                                        Math.pow(10.0, detailsJson.optJSONObject("price")?.optInt("decimals", 9)?.toDouble() ?: 9.0)
+                            ),
+                            "fdv_usd" to formatMarketCap(
+                                (detailsJson.optJSONObject("fdmc")?.optString("value", "0")?.toDouble() ?: 0.0) /
+                                        Math.pow(10.0, detailsJson.optJSONObject("fdmc")?.optInt("decimals", 6)?.toDouble() ?: 6.0)
+                            ),
+                            "liquidityUsd" to formatLiquidity(
+                                (detailsJson.optJSONObject("liquidityUsd")?.optString("value", "0")?.toDouble() ?: 0.0) /
+                                        Math.pow(10.0, detailsJson.optJSONObject("liquidityUsd")?.optInt("decimals", 6)?.toDouble() ?: 6.0)
+                            ),
+                            "holders" to detailsJson.optString("holdersCount", "0"),
+                            "market_cap" to formatSupply(
+                                detailsJson.optString("totalSupply", "0").toDouble() / Math.pow(10.0, 9.0)
+                            )
+                        )
+                    }
+                }
+
+                val prefs = getSharedPreferences("price_cache", MODE_PRIVATE)
+                with(prefs.edit()) {
+                    jettonData.forEach { (key, value) -> putString(key, value) }
+                    apply()
+                }
+                if (!isFinishing && !isDestroyed) {
+                    runOnUiThread { updateUIFromCache(prefs) }
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Ошибка при запросе Jetton данных", e)
+                val prefs = getSharedPreferences("price_cache", MODE_PRIVATE)
+                if (!isFinishing && !isDestroyed) {
+                    runOnUiThread { updateUIFromCache(prefs) }
+                }
             }
         }
     }
 
-    private fun fetchDataFromAPI(): Map<String, String> {
-        try {
-            val jettonRequest = Request.Builder()
-                .url(jettonUrl)
-                .header("accept", "application/json")
-                .header("Authorization", "Bearer $apiKey")
-                .build()
-            val jettonResponse = client.newCall(jettonRequest).execute()
-            val jettonBody = jettonResponse.body?.string() ?: "{}"
-            Log.d("MainActivity", "Jetton API response: $jettonBody")
+    private fun fetchStatsData() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val statsRequest = Request.Builder()
+                    .url(statsUrl)
+                    .header("accept", "application/json")
+                    .build()
+                val statsResponse = client.newCall(statsRequest).execute()
+                val statsBody = statsResponse.body?.string() ?: "{}"
+                Log.d("MainActivity", "Stats API response: $statsBody")
 
-            val jettonData = when (jettonResponse.code) {
-                429 -> {
-                    Log.w("MainActivity", "Jetton API: Too many requests")
-                    return getCachedOrDefaultData()
-                }
-                401 -> {
-                    Log.w("MainActivity", "Jetton API: Unauthorized")
-                    mapOf(
-                        "price_usd" to "Ошибка авторизации",
-                        "price" to "Ошибка авторизации",
-                        "fdv_usd" to "Ошибка авторизации",
-                        "liquidityUsd" to "Ошибка авторизации",
-                        "holders" to "Ошибка авторизации",
-                        "market_cap" to "Ошибка авторизации"
-                    )
-                }
-                else -> {
-                    val jettonJson = JSONObject(jettonBody)
-                    val detailsJson = jettonJson.optJSONObject("details") ?: JSONObject()
+                val statsData = when (statsResponse.code) {
+                    429 -> {
+                        Log.w("MainActivity", "Stats API: Too many requests")
+                        getCachedOrDefaultData() // Используем кэш при 429
+                    }
+                    else -> {
+                        val statsJson = JSONObject(statsBody)
+                        val priceChangeJson = statsJson.optJSONObject("priceChange")?.optJSONObject("ton") ?: JSONObject()
 
-                    mapOf(
-                        "price_usd" to formatPrice(
-                            (detailsJson.optJSONObject("priceUsd")?.optString("value", "0")?.toDouble() ?: 0.0) /
-                                    Math.pow(10.0, detailsJson.optJSONObject("priceUsd")?.optInt("decimals", 6)?.toDouble() ?: 6.0)
-                        ),
-                        "price" to formatTonPrice(
-                            (detailsJson.optJSONObject("price")?.optString("value", "0")?.toDouble() ?: 0.0) /
-                                    Math.pow(10.0, detailsJson.optJSONObject("price")?.optInt("decimals", 9)?.toDouble() ?: 9.0)
-                        ),
-                        "fdv_usd" to formatMarketCap(
-                            (detailsJson.optJSONObject("fdmc")?.optString("value", "0")?.toDouble() ?: 0.0) /
-                                    Math.pow(10.0, detailsJson.optJSONObject("fdmc")?.optInt("decimals", 6)?.toDouble() ?: 6.0)
-                        ),
-                        "liquidityUsd" to formatLiquidity(
-                            (detailsJson.optJSONObject("liquidityUsd")?.optString("value", "0")?.toDouble() ?: 0.0) /
-                                    Math.pow(10.0, detailsJson.optJSONObject("liquidityUsd")?.optInt("decimals", 6)?.toDouble() ?: 6.0)
-                        ),
-                        "holders" to detailsJson.optString("holdersCount", "0"),
-                        "market_cap" to formatSupply(
-                            detailsJson.optString("totalSupply", "0").toDouble() / Math.pow(10.0, 9.0)
+                        mapOf(
+                            "change_1h" to (priceChangeJson.optJSONObject("hour")?.optDouble("changePercent", 0.0) ?: 0.0).toString(),
+                            "change_6h" to (priceChangeJson.optJSONObject("hour6")?.optDouble("changePercent", 0.0) ?: 0.0).toString(),
+                            "change_12h" to (priceChangeJson.optJSONObject("hour12")?.optDouble("changePercent", 0.0) ?: 0.0).toString(),
+                            "change_day" to (priceChangeJson.optJSONObject("day")?.optDouble("changePercent", 0.0) ?: 0.0).toString()
                         )
-                    )
+                    }
+                }
+
+                val prefs = getSharedPreferences("price_cache", MODE_PRIVATE)
+                with(prefs.edit()) {
+                    statsData.forEach { (key, value) -> putString(key, value) }
+                    apply()
+                }
+                if (!isFinishing && !isDestroyed) {
+                    runOnUiThread { updateUIFromCache(prefs) }
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Ошибка при запросе Stats данных", e)
+                val prefs = getSharedPreferences("price_cache", MODE_PRIVATE)
+                if (!isFinishing && !isDestroyed) {
+                    runOnUiThread { updateUIFromCache(prefs) }
                 }
             }
-
-            val statsRequest = Request.Builder()
-                .url(statsUrl)
-                .header("accept", "application/json")
-                .header("Authorization", "Bearer $apiKey")
-                .build()
-            val statsResponse = client.newCall(statsRequest).execute()
-            val statsBody = statsResponse.body?.string() ?: "{}"
-            Log.d("MainActivity", "Stats API response: $statsBody")
-
-            val statsData = when (statsResponse.code) {
-                429 -> {
-                    Log.w("MainActivity", "Stats API: Too many requests")
-                    mapOf("change_1h" to "0", "change_6h" to "0", "change_12h" to "0", "change_day" to "0")
-                }
-                401 -> {
-                    Log.w("MainActivity", "Stats API: Unauthorized")
-                    mapOf("change_1h" to "0", "change_6h" to "0", "change_12h" to "0", "change_day" to "0")
-                }
-                else -> {
-                    val statsJson = JSONObject(statsBody)
-                    val priceChangeJson = statsJson.optJSONObject("priceChange")?.optJSONObject("ton") ?: JSONObject()
-
-                    mapOf(
-                        "change_1h" to (priceChangeJson.optJSONObject("hour")?.optDouble("changePercent", 0.0) ?: 0.0).toString(),
-                        "change_6h" to (priceChangeJson.optJSONObject("hour6")?.optDouble("changePercent", 0.0) ?: 0.0).toString(),
-                        "change_12h" to (priceChangeJson.optJSONObject("hour12")?.optDouble("changePercent", 0.0) ?: 0.0).toString(),
-                        "change_day" to (priceChangeJson.optJSONObject("day")?.optDouble("changePercent", 0.0) ?: 0.0).toString()
-                    )
-                }
-            }
-
-            return jettonData + statsData
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Ошибка при запросе данных", e)
-            return getCachedOrDefaultData()
         }
     }
 
