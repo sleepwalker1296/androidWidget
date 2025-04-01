@@ -70,7 +70,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Цена GOVNO"
-                    android:textColor="#838384"
+                    android:textColor="?attr/customSubtitleColor"
                     android:textSize="14sp"/>
 
             </LinearLayout>
@@ -79,7 +79,7 @@
 
         <!-- Иконка настроек справа -->
         <ImageView
-            android:id="@+id/settings_button"
+            android:id="@+id/settings_layout"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:src="@drawable/ic_settings"
@@ -122,7 +122,7 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:text="Цена в USD"
-                    android:textColor="#838384"
+                    android:textColor="?attr/customSubtitleColor"
                     android:textSize="16sp"
                     android:textStyle="bold"/>
 
@@ -165,7 +165,7 @@
                     android:text="Цена TON"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:textColor="#838384"
+                    android:textColor="?attr/customSubtitleColor"
                     android:gravity="center"/>
 
                 <LinearLayout
@@ -232,7 +232,7 @@
                     android:layout_height="wrap_content"
                     android:text="1 час"
                     android:textSize="14sp"
-                    android:textColor="#838384"
+                    android:textColor="?attr/customSubtitleColor"
                     android:gravity="center"/>
 
                 <TextView
@@ -273,7 +273,7 @@
                     android:layout_height="wrap_content"
                     android:text="6 часов"
                     android:textSize="14sp"
-                    android:textColor="#838384"
+                    android:textColor="?attr/customSubtitleColor"
                     android:gravity="center"/>
 
                 <TextView
@@ -314,7 +314,7 @@
                     android:layout_height="wrap_content"
                     android:text="12 часов"
                     android:textSize="14sp"
-                    android:textColor="#838384"
+                    android:textColor="?attr/customSubtitleColor"
                     android:gravity="center"/>
 
                 <TextView
@@ -354,7 +354,7 @@
                     android:layout_height="wrap_content"
                     android:text="24 часа"
                     android:textSize="14sp"
-                    android:textColor="#838384"
+                    android:textColor="?attr/customSubtitleColor"
                     android:gravity="center"/>
 
                 <TextView
@@ -405,7 +405,7 @@
                     android:layout_height="wrap_content"
                     android:text="Рыночная капитализация"
                     android:textSize="14sp"
-                    android:textColor="#838384"
+                    android:textColor="?attr/customSubtitleColor"
                     android:gravity="center"/>
 
                 <TextView
@@ -445,7 +445,7 @@
                     android:layout_height="wrap_content"
                     android:text="Ликвидность"
                     android:textSize="14sp"
-                    android:textColor="#838384"
+                    android:textColor="?attr/customSubtitleColor"
                     android:gravity="center"/>
 
                 <TextView
@@ -496,7 +496,7 @@
                     android:layout_height="wrap_content"
                     android:text="Общее предложение"
                     android:textSize="14sp"
-                    android:textColor="#838384"
+                    android:textColor="?attr/customSubtitleColor"
                     android:gravity="center"/>
 
                 <TextView
@@ -536,7 +536,7 @@
                     android:layout_height="wrap_content"
                     android:text="Держатели"
                     android:textSize="14sp"
-                    android:textColor="#838384"
+                    android:textColor="?attr/customSubtitleColor"
                     android:gravity="center"/>
 
                 <TextView
@@ -554,5 +554,13 @@
         </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
+
+    <!-- WebView для графика TradingView -->
+    <WebView
+        android:id="@+id/webView"
+        android:layout_width="match_parent"
+        android:layout_height="400dp"
+        android:layout_marginTop="16dp"
+        android:scrollbars="none"/>
 
 </LinearLayout>

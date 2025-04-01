@@ -1,17 +1,29 @@
 package com.example.ggwidget
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.ViewGroup
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
+import android.webkit.JavascriptInterface
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -21,8 +33,6 @@ import org.json.JSONObject
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
-import android.view.animation.Animation
-import android.view.animation.AnimationUtils
 
 class MainActivity : AppCompatActivity() {
 
@@ -36,31 +46,89 @@ class MainActivity : AppCompatActivity() {
     private lateinit var change6hTextView: TextView
     private lateinit var change12hTextView: TextView
     private lateinit var changeDayTextView: TextView
+    private lateinit var webView: WebView
 
     private val jettonUrl = "https://api.dyor.io/v1/jettons/EQBlWgKnh_qbFYTXfKgGAQPxkxFsArDOSr9nlARSzydpNPwA"
     private val statsUrl = "https://api.dyor.io/v1/jettons/EQBlWgKnh_qbFYTXfKgGAQPxkxFsArDOSr9nlARSzydpNPwA/stats"
-    private val apiKey = "eyJhbGciOiJIUzI1NiIsImtuIjowLCJ0eXAiOiJKV1QifQ.eyJkYXRhIjp7ImlkIjo0OCwidmVyc2lvbiI6MH19.IQ3w_9DY4x9NPtwcwLhVXEvXCyqyObjW2DX7QS0F1L0"
+    private val apiKey = "eyJhbGciOiJIUzI1NiIsImtuIjowLCJ0eXAiOiJKV1QifQ.eyJkYXRhIjp7ImlkIjo0OCwidmVyc2lvbiI6Mn19.S3-WcrUehqy00pLsOhu81iwdirMJ7eYxBB6HgezzZmI"
     private val client = OkHttpClient()
 
     private val handler = Handler(Looper.getMainLooper())
     private val updateRunnable = object : Runnable {
         override fun run() {
             fetchAndUpdateData()
-            handler.postDelayed(this, 60_000) // 60 секунд
+            handler.postDelayed(this, 60_000)
+        }
+    }
+
+    private val settingsLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val isDarkTheme = result.data?.getBooleanExtra("dark_theme", false) ?: false
+            val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+            prefs.edit().putBoolean("dark_theme", isDarkTheme).apply()
+            updateBackgroundAndChart(isDarkTheme)
+        }
+    }
+
+    private val themeChangeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            Log.d("MainActivity", "Received theme change broadcast")
+            val isDarkTheme = intent?.getBooleanExtra("dark_theme", false) ?: false
+            updateBackgroundAndChart(isDarkTheme)
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        applyThemeFromPreferences()
+        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        val isDarkTheme = prefs.getBoolean("dark_theme", false)
+        AppCompatDelegate.setDefaultNightMode(
+            if (isDarkTheme) AppCompatDelegate.MODE_NIGHT_YES
+            else AppCompatDelegate.MODE_NIGHT_NO
+        )
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // Инициализация WebView
+        webView = findViewById(R.id.webView)
+        webView.settings.javaScriptEnabled = true
+        webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE // Отключаем кэш
+        webView.setBackgroundColor(
+            resources.getColor(if (isDarkTheme) android.R.color.black else android.R.color.white, theme)
+        )
+        webView.addJavascriptInterface(object : Any() {
+            @JavascriptInterface
+            fun setTheme(isDarkTheme: String) {}
+        }, "AndroidInterface")
+        webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                Log.d("WebView", "Страница загружена: $url")
+                view?.loadUrl("javascript:AndroidInterface.setTheme('$isDarkTheme')")
+            }
+            override fun onReceivedError(
+                view: WebView?,
+                request: WebResourceRequest?,
+                error: WebResourceError?
+            ) {
+                Log.e("WebView", "Ошибка загрузки: ${error?.description}")
+            }
+        }
+        webView.loadUrl("file:///android_asset/tradingview.html")
+
+        Log.d("MainActivity", "onCreate: Current theme = $isDarkTheme")
+        updateBackgroundAndChart(isDarkTheme)
+
+        registerReceiver(
+            themeChangeReceiver,
+            IntentFilter("com.example.ggwidget.THEME_CHANGED"),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
         val layout = findViewById<LinearLayout>(R.id.main_layout)
         layout.layoutParams = (layout.layoutParams as ViewGroup.MarginLayoutParams).apply {
             topMargin = getStatusBarHeight()
         }
 
-        // Инициализация TextView
         priceTextView = findViewById(R.id.price_usd)
         priceTonTextView = findViewById(R.id.price_ton)
         fdvTextView = findViewById(R.id.fdv_usd)
@@ -72,14 +140,14 @@ class MainActivity : AppCompatActivity() {
         change12hTextView = findViewById(R.id.change_12h)
         changeDayTextView = findViewById(R.id.change_day)
 
-        // Настройка кнопки настроек
-        val settingsButton = findViewById<ImageView>(R.id.settings_button)
+        val settingsButton = findViewById<ImageView>(R.id.settings_layout)
         settingsButton.setOnClickListener {
             val animation = AnimationUtils.loadAnimation(this, R.anim.rotate)
             animation.setAnimationListener(object : Animation.AnimationListener {
                 override fun onAnimationStart(animation: Animation?) {}
                 override fun onAnimationEnd(animation: Animation?) {
-                    startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+                    val intent = Intent(this@MainActivity, SettingsActivity::class.java)
+                    settingsLauncher.launch(intent)
                     overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
                 }
                 override fun onAnimationRepeat(animation: Animation?) {}
@@ -87,21 +155,53 @@ class MainActivity : AppCompatActivity() {
             settingsButton.startAnimation(animation)
         }
 
-        // Восстановление данных из сохранённого состояния или кэша
-        val prefs = getSharedPreferences("price_cache", MODE_PRIVATE)
+        val pricePrefs = getSharedPreferences("price_cache", MODE_PRIVATE)
         if (savedInstanceState != null) {
             restoreFromSavedState(savedInstanceState)
         } else {
-            updateUIFromCache(prefs)
+            updateUIFromCache(pricePrefs)
         }
 
-        fetchAndUpdateData() // Первый запрос
-        handler.post(updateRunnable) // Запускаем обновление каждую минуту
+        fetchAndUpdateData()
+        handler.post(updateRunnable)
+    }
+
+    private fun updateBackgroundAndChart(isDarkTheme: Boolean) {
+        val rootView = findViewById<LinearLayout>(R.id.main_layout)
+        rootView?.let {
+            if (isDarkTheme) {
+                it.setBackgroundColor(resources.getColor(android.R.color.black, theme))
+                webView.setBackgroundColor(resources.getColor(android.R.color.black, theme))
+            } else {
+                it.setBackgroundColor(resources.getColor(android.R.color.white, theme))
+                webView.setBackgroundColor(resources.getColor(android.R.color.white, theme))
+            }
+            Log.d("MainActivity", "Background updated to $isDarkTheme")
+        }
+        // Принудительное обновление темы с задержкой
+        handler.postDelayed({
+            webView.evaluateJavascript("AndroidInterface.setTheme('$isDarkTheme')") { result ->
+                Log.d("WebView", "Результат вызова setTheme: $result")
+            }
+        }, 200)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        handler.removeCallbacks(updateRunnable)
+        unregisterReceiver(themeChangeReceiver)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        val isDarkTheme = prefs.getBoolean("dark_theme", false)
+        Log.d("MainActivity", "onResume: Current theme = $isDarkTheme")
+        updateBackgroundAndChart(isDarkTheme)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        // Сохранение текущих значений перед пересозданием
         outState.putString("price_usd", priceTextView.text.toString())
         outState.putString("price_ton", priceTonTextView.text.toString())
         outState.putString("fdv_usd", fdvTextView.text.toString())
@@ -143,20 +243,13 @@ class MainActivity : AppCompatActivity() {
         setBackgroundColor(changeDayTextView, changeDay)
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        handler.removeCallbacks(updateRunnable) // Останавливаем обновление при закрытии
-    }
-
     private fun fetchAndUpdateData() {
         lifecycleScope.launch(Dispatchers.IO) {
             val data = fetchDataFromAPI()
             Log.d("MainActivity", "Fetched data: $data")
             val prefs = getSharedPreferences("price_cache", MODE_PRIVATE)
             with(prefs.edit()) {
-                data.forEach { (key, value) ->
-                    putString(key, value)
-                }
+                data.forEach { (key, value) -> putString(key, value) }
                 apply()
             }
             if (!isFinishing && !isDestroyed) {
@@ -167,7 +260,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun fetchDataFromAPI(): Map<String, String> {
         try {
-            // Запрос к основному API
             val jettonRequest = Request.Builder()
                 .url(jettonUrl)
                 .header("accept", "application/json")
@@ -180,7 +272,7 @@ class MainActivity : AppCompatActivity() {
             val jettonData = when (jettonResponse.code) {
                 429 -> {
                     Log.w("MainActivity", "Jetton API: Too many requests")
-                    return getCachedOrDefaultData() // Возвращаем кэшированные данные вместо ошибки
+                    return getCachedOrDefaultData()
                 }
                 401 -> {
                     Log.w("MainActivity", "Jetton API: Unauthorized")
@@ -222,7 +314,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // Запрос к API статистики
             val statsRequest = Request.Builder()
                 .url(statsUrl)
                 .header("accept", "application/json")
@@ -235,21 +326,11 @@ class MainActivity : AppCompatActivity() {
             val statsData = when (statsResponse.code) {
                 429 -> {
                     Log.w("MainActivity", "Stats API: Too many requests")
-                    mapOf(
-                        "change_1h" to "0",
-                        "change_6h" to "0",
-                        "change_12h" to "0",
-                        "change_day" to "0"
-                    )
+                    mapOf("change_1h" to "0", "change_6h" to "0", "change_12h" to "0", "change_day" to "0")
                 }
                 401 -> {
                     Log.w("MainActivity", "Stats API: Unauthorized")
-                    mapOf(
-                        "change_1h" to "0",
-                        "change_6h" to "0",
-                        "change_12h" to "0",
-                        "change_day" to "0"
-                    )
+                    mapOf("change_1h" to "0", "change_6h" to "0", "change_12h" to "0", "change_day" to "0")
                 }
                 else -> {
                     val statsJson = JSONObject(statsBody)
@@ -267,7 +348,7 @@ class MainActivity : AppCompatActivity() {
             return jettonData + statsData
         } catch (e: Exception) {
             Log.e("MainActivity", "Ошибка при запросе данных", e)
-            return getCachedOrDefaultData() // Возвращаем кэшированные данные вместо ошибки
+            return getCachedOrDefaultData()
         }
     }
 
@@ -316,19 +397,11 @@ class MainActivity : AppCompatActivity() {
         setBackgroundColor(changeDayTextView, changeDay)
     }
 
-    private fun applyThemeFromPreferences() {
-        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
-        val isDarkTheme = prefs.getBoolean("dark_theme", false)
-        AppCompatDelegate.setDefaultNightMode(
-            if (isDarkTheme) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
-        )
-    }
-
     private fun formatPrice(price: Double): String {
         return try {
             "$" + DecimalFormat("#0.00").format(price).replace(",", ".")
         } catch (e: Exception) {
-            "$ 12,34" // Значение по умолчанию
+            "$ 12,34"
         }
     }
 
@@ -336,7 +409,7 @@ class MainActivity : AppCompatActivity() {
         return try {
             DecimalFormat("#0.00").format(price).replace(",", ".")
         } catch (e: Exception) {
-            "11,23" // Значение по умолчанию
+            "11,23"
         }
     }
 
@@ -348,7 +421,7 @@ class MainActivity : AppCompatActivity() {
                 else -> "$${DecimalFormat("#0.00").format(value)}"
             }
         } catch (e: Exception) {
-            "100B" // Значение по умолчанию
+            "100B"
         }
     }
 
@@ -357,7 +430,7 @@ class MainActivity : AppCompatActivity() {
             val dfs = DecimalFormatSymbols(Locale.US).apply { groupingSeparator = ' '; decimalSeparator = ',' }
             DecimalFormat("$ #,##0.00", dfs).format(value)
         } catch (e: Exception) {
-            "5M" // Значение по умолчанию
+            "5M"
         }
     }
 
@@ -365,7 +438,7 @@ class MainActivity : AppCompatActivity() {
         return try {
             DecimalFormat("#,##0").format(value).replace(",", " ")
         } catch (e: Exception) {
-            "777 777" // Значение по умолчанию
+            "777 777"
         }
     }
 

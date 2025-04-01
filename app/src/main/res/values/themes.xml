@@ -12,6 +12,7 @@
         <item name="colorOnSurface">#F2F2F2</item>
         <item name="colorBackground">@color/your_background_color</item>
         <item name="colorOnBackground">@color/your_text_primary</item>
+        <item name="customSubtitleColor">#aeaeae</item>
 
         <item name="android:statusBarColor">@color/white</item>
         <item name="android:windowLightStatusBar">true</item>

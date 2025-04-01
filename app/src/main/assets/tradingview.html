@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    .tradingview-widget-container {
+      width: 100%;
+      height: 100%;
+    }
+    .tradingview-widget-container__widget {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+<div class="tradingview-widget-container">
+  <div class="tradingview-widget-container__widget" id="tradingview_widget"></div>
+</div>
+
+<script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async></script>
+<script type="text/javascript">
+  let currentTheme = "light";
+
+  function initChart(theme) {
+    console.log("Инициализация графика с темой: " + theme);
+    currentTheme = theme || "light";
+
+    // Удаляем старый виджет
+    const container = document.getElementById('tradingview_widget');
+    if (container) {
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+    }
+
+    // Создаём новый скрипт
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.async = true;
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    script.innerHTML = JSON.stringify({
+      "autosize": true,
+      "symbol": "DEDUST:GOVNOTON_EQAF2L.USD",
+      "interval": "D",
+      "timezone": "Etc/UTC",
+      "theme": currentTheme,
+      "style": "1",
+      "locale": "ru",
+      "hide_top_toolbar": true,
+      "hide_legend": true,
+      "allow_symbol_change": false,
+      "save_image": false,
+      "hide_volume": true,
+      "support_host": "https://www.tradingview.com"
+    });
+    container.appendChild(script);
+  }
+
+  window.AndroidInterface = {
+    setTheme: function(isDarkTheme) {
+      const theme = isDarkTheme === "true" ? "dark" : "light";
+      console.log("Получена тема от Android: " + theme);
+      if (theme !== currentTheme) {
+        initChart(theme);
+      }
+    }
+  };
+
+  document.addEventListener("DOMContentLoaded", function() {
+    initChart("light");
+  });
+</script>
+</body>
+</html>

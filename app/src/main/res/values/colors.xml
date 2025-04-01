@@ -12,6 +12,7 @@
     <color name="light_red">#F8D7DA</color>
     <color name="colorOnBackground">#000000</color>
     <color name="colorOnSurface">#f2f2f2</color>
+    <color name="customSubtitleColor">#AEAEAE</color>
 
     <!-- Цвета для светлой темы -->
     <color name="your_primary_color">#FF6200EE</color>

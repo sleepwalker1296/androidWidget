@@ -9,9 +9,10 @@
         <item name="colorOnSecondary">@color/white</item>
 
         <item name="colorSurface">@color/your_surface_color_dark</item>
-        <item name="colorOnSurface">#1E1E1F</item>
-        <item name="colorBackground">#121213</item>
+        <item name="colorOnSurface">#1e1e1f</item>
+        <item name="colorBackground">@color/your_background_color_dark</item>
         <item name="colorOnBackground">@color/your_text_primary_dark</item>
+        <item name="customSubtitleColor">#5a5a5a</item>
 
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
